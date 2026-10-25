@@ -2120,7 +2120,11 @@ $('#install-close').onclick = () => $('#install-dialog').close();
   const update = () => {
     const typing = touchScreen() && isField(document.activeElement);
     const shrunk = vv ? window.innerHeight - vv.height > 120 : false;
-    root.classList.toggle('kbd-open', typing || (touchScreen() && shrunk));
+    const was = root.classList.contains('kbd-open');
+    const open = typing || (touchScreen() && shrunk);
+    root.classList.toggle('kbd-open', open);
+    // iOS laisse parfois la page décalée vers le bas après la fermeture du clavier : on la recale.
+    if (was && !open) setTimeout(() => window.scrollTo(window.scrollX, window.scrollY), 80);
     if (vv) {
       root.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
       root.style.setProperty('--vvtop', `${Math.round(vv.offsetTop)}px`);
@@ -2129,6 +2133,16 @@ $('#install-close').onclick = () => $('#install-dialog').close();
   document.addEventListener('focusin', update);
   document.addEventListener('focusout', () => setTimeout(update, 60));
   if (vv) { vv.addEventListener('resize', update); vv.addEventListener('scroll', update); }
+  update();
+})();
+
+// App installée : quand on tire la page vers le bas tout en haut, iOS montre le fond de la page
+// au-dessus de l'en-tête. En haut de page, ce fond devient vert (comme l'en-tête) ; ailleurs il
+// reste crème pour que le bas de la page ne change pas.
+(function greenOverscroll() {
+  const root = document.documentElement;
+  const update = () => root.classList.toggle('at-top', window.scrollY < 120);
+  window.addEventListener('scroll', update, { passive: true });
   update();
 })();
 
