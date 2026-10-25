@@ -945,3 +945,15 @@ details.advanced > summary { cursor: pointer; font-weight: 700; color: var(--ink
   :root.green-head #btn-help { background: var(--mustard); color: #4a3200; }
 }
 @media (max-width: 900px) { :root.sub-page .welcome { display: none !important; } }
+
+/* Téléphone : l'en-tête vert est fixé à l'écran, comme la barre du bas ; seul le contenu entre les
+   deux défile et rebondit. La couche verte de rebond n'est donc plus utile sur téléphone. */
+@media (max-width: 900px) {
+  :root.green-head .topbar { position: fixed; top: 0; left: 0; right: 0; margin: 0; }
+  :root.green-head .topbar::before { display: none; }
+  :root.green-head::before { display: none; }
+  :root.green-head body { padding-top: calc(env(safe-area-inset-top) + 56px); }
+  :root.green-head { scroll-padding-top: calc(env(safe-area-inset-top) + 64px); }
+  /* Clavier ouvert : l'en-tête suit la page (une barre fixe se placerait mal au-dessus du clavier sur iPhone) */
+  :root.green-head.kbd-open .topbar { position: absolute; }
+}
