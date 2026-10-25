@@ -227,6 +227,19 @@ test('titres des pages de la même taille que « Plan de la salle »', async () 
   await done(p);
 });
 
+test("le logo ramène à l'accueil", async () => {
+  const p = await page();
+  await click(p, '#tabbar [data-nav=settings]');
+  await click(p, '#brand');
+  await p.waitForTimeout(600);
+  assert.ok(!(await p.evaluate(() => document.documentElement.classList.contains('sub-page'))), 'retour au plan');
+  assert.equal(await p.evaluate(() => Math.round(scrollY)), 0, 'en haut de page');
+  await p.evaluate(() => scrollTo(0, 900));
+  await click(p, '#brand');
+  await p.waitForFunction(() => scrollY === 0);
+  await done(p);
+});
+
 test('jour J : arrivées comptées', async () => {
   const p = await page();
   await click(p, '.tabs [data-tab=day]');

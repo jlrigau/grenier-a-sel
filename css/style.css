@@ -962,3 +962,7 @@ details.advanced > summary { cursor: pointer; font-weight: 700; color: var(--ink
   :root.sub-page .page-head { margin-bottom: 0; }
   :root.sub-page .tab-panel > :first-child { margin-top: 0; }
 }
+
+/* Logo et nom : lien vers l'accueil */
+#brand { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 999px; }
+#brand:focus-visible { outline: 2px solid var(--mustard); outline-offset: 3px; }

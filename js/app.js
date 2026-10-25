@@ -1802,6 +1802,14 @@ function openHelp() {
   else if (!$('#help-dialog').open) $('#help-dialog').showModal();
 }
 $('#btn-help').onclick = openHelp;
+// Logo et nom : retour à la page d'accueil (le plan), en haut de page.
+function goHome() {
+  if (document.documentElement.classList.contains('plan-full')) setPlanFull(false);
+  if (ui.tab !== 'exhibitors') showTab('exhibitors');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('#brand').onclick = goHome;
+$('#brand').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome(); } };
 $('#welcome').addEventListener('click', (e) => {
   const act = e.target.closest('[data-welcome]')?.dataset.welcome;
   if (!act) return;
@@ -2402,7 +2410,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v49';
+const APP_VERSION = 'v50';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------
