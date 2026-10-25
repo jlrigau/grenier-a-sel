@@ -62,6 +62,7 @@
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
     <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></symbol>
     <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.2 9.2a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 4.3"/><path d="M12 17.6h.01"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
     <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
     <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4M12 2v13"/></symbol>
@@ -99,6 +100,7 @@
       </div>
       <button id="btn-share" class="round" title="Partager cet événement" aria-label="Partager cet événement"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg></button>
       <button id="btn-print" class="pill ghost"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg><span class="lbl">Imprimer</span></button>
+      <button id="btn-help" class="pill ghost" title="Aide : mode d'emploi" aria-label="Aide"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg><span class="lbl">Aide</span></button>
       <button id="btn-list" class="pill green"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg><span class="lbl">Exporter la liste</span><span id="list-badge" class="list-badge" hidden title="La liste a changé depuis le dernier export">!</span></button>
     </div>
   </header>
@@ -125,7 +127,7 @@
         <li><b>Ajoutez les exposants</b> : photo ou saisie des fiches papier, ou lien d'inscription en ligne (Réglages).</li>
         <li><b>Placez-les</b> : automatiquement selon les contraintes, puis ajustez sur le plan.</li>
       </ol>
-      <p class="muted small">L'événement « Démonstration » contient des exposants imaginaires pour essayer sans risque. Vos données restent sur cet appareil.</p>
+      <p class="muted small">L'événement « Démonstration » contient des exposants imaginaires pour essayer sans risque. Vos données restent sur cet appareil. Le mode d'emploi complet est dans l'<b>Aide</b> (bouton <b>?</b> en haut).</p>
       <div class="btn-row">
         <button class="btn primary" data-welcome="create">Créer mon événement</button>
         <button class="btn" data-welcome="demo">Explorer la démonstration</button>
@@ -218,6 +220,7 @@
       <section class="tab-panel" id="tab-plans" hidden></section>
       <section class="tab-panel" id="tab-settings" hidden></section>
       <section class="tab-panel" id="tab-list" hidden></section>
+      <section class="tab-panel" id="tab-help" hidden></section>
       <section class="tab-panel" id="tab-day" hidden>
         <div class="day-head">
           <div class="day-count" id="day-count"></div>
@@ -245,7 +248,7 @@
 
   <nav class="tabbar" id="tabbar" aria-label="Navigation">
     <button data-nav="plan" class="on"><svg class="i" aria-hidden="true"><use href="#i-layout"/></svg><span>Plan</span></button>
-    <button data-nav="list"><svg class="i" aria-hidden="true"><use href="#i-table"/></svg><span>Liste</span></button>
+    <button data-nav="list"><svg class="i" aria-hidden="true"><use href="#i-table"/></svg><span>Liste</span><b class="tab-badge" id="tab-list-badge" hidden title="La liste a changé depuis le dernier export">!</b></button>
     <button data-nav="fiches" class="tab-cta" aria-label="Ajouter des fiches d'inscription"><svg class="i" aria-hidden="true"><use href="#i-camera"/></svg><span>Fiches</span></button>
     <button data-nav="plans"><svg class="i" aria-hidden="true"><use href="#i-layers"/></svg><span>Versions</span></button>
     <button data-nav="settings"><svg class="i" aria-hidden="true"><use href="#i-settings"/></svg><span>Réglages</span></button>
@@ -412,6 +415,12 @@
     <div class="list-scroll"><table class="list-table" id="list-table"></table></div>
     <p class="muted small">Cliquez une ligne pour modifier l'exposant · cliquez un titre de colonne pour trier.</p>
     </div>
+  </dialog>
+
+  <dialog id="help-dialog" class="wide">
+    <button type="button" class="sheet-close" data-close title="Fermer" aria-label="Fermer"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <h2>Aide</h2>
+    <div class="help-body" id="help-body"></div>
   </dialog>
 
   <dialog id="paste-dialog">

@@ -785,14 +785,14 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
   :root.sub-page #stats-row, :root.sub-page #map-wrap,
   :root.sub-page .sidebar > :not(.page-head):not(.tab-panel) { display: none !important; }
   :root.sub-page .page-head { display: block; margin: 2px 0 12px; }
-  :root.sub-page .page-head h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+  :root.sub-page .page-head h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
   :root.sub-page .page-head p { margin: 2px 0 0; }
 }
 
 /* Liste : le même contenu sert à la fenêtre (ordinateur) et à la page (téléphone). */
 .list-body { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
 #tab-list .close-x { display: none; }
-#tab-list .list-head h2 { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+#tab-list .list-head h2 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
 #tab-list .list-scroll { overflow: visible; }
 
 /* Champ date : Safari (iPhone) lui donne une largeur minimale propre qui le fait déborder. */
@@ -923,3 +923,25 @@ details.advanced > summary { cursor: pointer; font-weight: 700; color: var(--ink
 .welcome-body > b { font-size: 20px; }
 .welcome-body ol { margin: 8px 0; padding-left: 20px; display: grid; gap: 4px; }
 @media (max-width: 900px) { .welcome:not([hidden]) { margin: 0 14px 12px; } }
+
+/* Aide */
+.help-intro { margin: 0 0 10px; color: var(--ink-2); }
+.help-item { border-radius: 16px; background: var(--surface-2); margin-bottom: 8px; }
+.help-item > summary { cursor: pointer; font-weight: 700; padding: 12px 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+.help-item > summary::-webkit-details-marker { display: none; }
+.help-item > summary::after { content: '+'; font-weight: 600; color: var(--ink-3); font-size: 18px; }
+.help-item[open] > summary::after { content: '−'; }
+.help-text { padding: 0 14px 12px; line-height: 1.5; }
+.help-text p { margin: 0 0 8px; }
+.help-text ul { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 4px; }
+#help-dialog .help-body { max-height: 70vh; overflow: auto; }
+/* Onglet Liste : « ! » quand la liste a changé depuis le dernier export */
+.tabbar button { position: relative; }
+.tab-badge { position: absolute; top: 2px; left: calc(50% + 6px); width: 16px; height: 16px; border-radius: 50%; background: var(--mustard); color: #4a3200; font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.tab-badge[hidden] { display: none; }
+/* Téléphone : l'Aide remplace « Exporter la liste » (déjà dans l'onglet Liste) dans l'en-tête */
+@media (max-width: 900px) {
+  :root.green-head #btn-list { display: none; }
+  :root.green-head #btn-help { background: var(--mustard); color: #4a3200; }
+}
+@media (max-width: 900px) { :root.sub-page .welcome { display: none !important; } }

@@ -6,6 +6,7 @@ import { ic, SNAP, $, $$, uid, esc, r2, snap, clamp, plural, touchScreen, isText
 import { renderDay } from './day.js';
 import { openNotify, copyEmails } from './messages.js';
 import { regToFields, inviteUrl } from './inscriptions.js';
+import { helpHTML } from './help.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
 const NOTICE_KEY = 'grenier-a-sel/notice-dismissed';
@@ -1094,7 +1095,7 @@ $('#ex-filters').addEventListener('click', (e) => {
 });
 // Sur téléphone, « Versions » et « Réglages » sont des pages à part (le reste est masqué) ;
 // le « retour » du téléphone ramène au plan.
-const SUB_PAGES = { plans: 'Versions', settings: 'Réglages', list: '', day: 'Jour J' };
+const SUB_PAGES = { plans: 'Versions', settings: 'Réglages', list: '', day: 'Jour J', help: 'Aide' };
 const onSubPage = () => isPhone() && ui.tab in SUB_PAGES;
 function renderPage() {
   const sub = onSubPage();
@@ -1637,6 +1638,7 @@ function markExported(how) {
 
 function renderListBadge() {
   $('#list-badge').hidden = !listOutdated();
+  $('#tab-list-badge').hidden = !listOutdated();
 }
 
 function renderListStatus() {
@@ -1790,6 +1792,16 @@ $('#list-body').addEventListener('click', (e) => {
 
 $('#backup-alert').addEventListener('click', (e) => { if (e.target.closest('[data-backup]')) backupAll(); });
 $('#btn-share').onclick = () => shareEvent();
+
+// Aide : page dédiée sur téléphone, fenêtre sur ordinateur (le même contenu est déplacé).
+$('#help-body').innerHTML = helpHTML();
+function openHelp() {
+  const target = isPhone() ? $('#tab-help') : $('#help-dialog');
+  if ($('#help-body').parentElement !== target) target.appendChild($('#help-body'));
+  if (isPhone()) showTab('help');
+  else if (!$('#help-dialog').open) $('#help-dialog').showModal();
+}
+$('#btn-help').onclick = openHelp;
 $('#welcome').addEventListener('click', (e) => {
   const act = e.target.closest('[data-welcome]')?.dataset.welcome;
   if (!act) return;
@@ -2285,7 +2297,7 @@ const phoneWidth = window.matchMedia('(max-width: 900px)');
 const syncGreenHead = () => document.documentElement.classList.toggle('green-head', standalone() || phoneWidth.matches);
 phoneWidth.addEventListener('change', () => {
   syncGreenHead();
-  if (!isPhone() && ui.tab === 'list') { ui.tab = 'exhibitors'; renderSidebar(); }
+  if (!isPhone() && (ui.tab === 'list' || ui.tab === 'help')) { ui.tab = 'exhibitors'; renderSidebar(); }
 });
 syncGreenHead();
 
@@ -2390,7 +2402,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v46';
+const APP_VERSION = 'v47';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------

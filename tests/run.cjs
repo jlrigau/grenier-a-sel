@@ -194,6 +194,29 @@ test('téléphone : « retour » après une fenêtre ouverte depuis une autre', 
   await done(p);
 });
 
+test("aide : page sur téléphone, fenêtre sur ordinateur", async () => {
+  const p = await page();
+  await click(p, '#btn-help');
+  assert.ok(await p.evaluate(() => document.documentElement.classList.contains('sub-page') && !document.querySelector('#tab-help').hidden));
+  assert.ok(await p.evaluate(() => document.querySelectorAll('#tab-help .help-item').length) >= 10);
+  await done(p);
+  const d = await page(DESKTOP);
+  await click(d, '#btn-help');
+  assert.ok(await d.evaluate(() => document.querySelector('#help-dialog').open));
+  await done(d);
+});
+
+test('titres des pages de la même taille que « Plan de la salle »', async () => {
+  const p = await page();
+  const size = (s) => p.evaluate((x) => getComputedStyle(document.querySelector(x)).fontSize, s);
+  const ref = await size('.map-toolbar h2');
+  await click(p, '#tabbar [data-nav=settings]');
+  assert.equal(await size('.page-head h1'), ref);
+  await click(p, '#tabbar [data-nav=list]');
+  assert.equal(await size('#tab-list .list-head h2'), ref);
+  await done(p);
+});
+
 test('jour J : arrivées comptées', async () => {
   const p = await page();
   await click(p, '.tabs [data-tab=day]');
