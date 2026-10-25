@@ -316,6 +316,8 @@ dialog h2 { margin: 0 0 14px; font-size: 18px; }
   .map-wrap { height: 72vh; flex: none; }
   .topbar { gap: 8px; padding: 8px 10px; }
   .event-picker { min-width: 0; flex-basis: 100%; order: 3; }
+  .event-picker { flex-wrap: wrap; }
+  .plan-pill { max-width: none; }
   .top-actions { margin-left: auto; }
   .legend { display: none; }
   #toasts { left: 8px; right: 8px; bottom: 8px; max-width: none; }
@@ -370,4 +372,37 @@ dialog.no-photo .fiche-body { grid-template-columns: 1fr; }
 @media (max-width: 900px) {
   .fiche-body { grid-template-columns: 1fr; }
   .fiche-photo img { max-height: 35vh; }
+}
+
+/* ---------- Liste des exposants ---------- */
+.list-btn { display: flex; justify-content: center; align-items: center; gap: 8px; }
+.list-badge { background: var(--warning); color: #fff; border-radius: 9px; font-size: 11px; padding: 1px 7px; }
+dialog.full { width: calc(100vw - 32px); max-width: 1500px; height: calc(100vh - 32px); display: none; flex-direction: column; gap: 8px; }
+dialog.full[open] { display: flex; }
+.list-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.list-head h2 { margin: 0; }
+.list-head input[type=search] { flex: 1; min-width: 160px; max-width: 320px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; }
+.list-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+.close-x { font-size: 22px; }
+.list-status { margin: 0; padding: 7px 12px; border-radius: 6px; font-size: 13px; }
+.list-status.ok { background: #e8f5ee; color: #22543d; }
+.list-status.outdated { background: var(--warning-soft); color: #7a5212; }
+.list-scroll { flex: 1; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.list-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.list-table th { position: sticky; top: 0; background: #f3f1ec; text-align: left; padding: 8px; cursor: pointer; white-space: nowrap; border-bottom: 1px solid var(--line); user-select: none; }
+.list-table th.sorted { color: var(--accent); }
+.list-table td { padding: 6px 8px; border-bottom: 1px solid #f0ece4; vertical-align: top; }
+.list-table td .dot { vertical-align: -1px; }
+.list-table tbody tr { cursor: pointer; }
+.list-table tbody tr:hover { background: var(--accent-soft); }
+.list-table .num { text-align: right; }
+.list-table tfoot td { position: sticky; bottom: 0; background: #f8f6f2; border-top: 1px solid var(--line); }
+.warn-text { color: var(--warning); font-style: italic; }
+
+/* ---------- Application installée ---------- */
+body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+#install-steps ol { padding-left: 20px; line-height: 1.8; }
+.kbd { display: inline-block; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; background: #f8f6f2; }
+@media (display-mode: standalone) {
+  .topbar { padding-top: max(8px, env(safe-area-inset-top)); }
 }

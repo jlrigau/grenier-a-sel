@@ -56,6 +56,21 @@ fiches d'inscription papier, **une fiche par photo**. L'outil :
 
 « ✍ Saisir » permet de recopier une fiche à la main avec le même formulaire.
 
+## Liste des exposants
+
+« 📋 Liste des exposants » affiche toutes les inscriptions (issues des fiches ou
+saisies) dans un tableau triable, avec les totaux (tables, grilles, électricité,
+règlements). Export **Excel (.xlsx)**, **CSV** ou impression. Un badge
+« à réexporter » apparaît dès que la liste a changé depuis le dernier export.
+Sur Chrome/Edge (ordinateur), « Fichier mis à jour automatiquement » réécrit
+un fichier Excel choisi à chaque modification, tant que l'outil est ouvert.
+
+## Application installable
+
+L'outil est une PWA : bouton « 📲 Installer » (Android, Chrome, Edge) ou, sur
+iPhone/iPad, Safari → Partager → « Sur l'écran d'accueil ». Une fois installé,
+il fonctionne hors connexion, lecture des fiches comprise (`sw.js`).
+
 ## Données
 
 Aucune donnée ne quitte le navigateur : tout est enregistré en localStorage.

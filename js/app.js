@@ -1,6 +1,7 @@
 import { ROOM, REGIONS, TABLE_SIZE, defaultTables, regionAt, regionLabel, hasPower, wallPower } from './room.js';
 import { evaluate, optimize, placeOne, groupAround, tableRect, DEFAULT_SETTINGS, SEVERITY_RANK } from './engine.js';
 import { readFiche, guessCategory } from './fiches.js';
+import { buildXlsx } from './xlsx.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
 const NOTICE_KEY = 'grenier-a-sel/notice-dismissed';
@@ -128,6 +129,7 @@ function commit(fn) {
   redoStack = [];
   save();
   refresh();
+  scheduleFileSync();
 }
 
 function restore(from, to) {
@@ -140,6 +142,7 @@ function restore(from, to) {
   db.currentId = state.id;
   save();
   refresh();
+  scheduleFileSync();
 }
 const undo = () => restore(undoStack, redoStack);
 const redo = () => restore(redoStack, undoStack);
@@ -315,6 +318,7 @@ function renderSidebar() {
   if (ui.tab === 'plans') renderPlans();
   if (ui.tab === 'settings') renderSettings();
   renderPlanStatus();
+  renderListBadge();
 }
 
 function exStatus(ex) {
@@ -1324,6 +1328,197 @@ ficheForm.addEventListener('submit', (e) => {
   nextFiche();
 });
 
+// ---------- Liste des exposants ----------
+
+const LIST_COLUMNS = [
+  { key: 'tablesNums', label: 'Table(s)', width: 10, get: (ex) => tableNums(ex.id).join(', '), sort: (ex) => tableNums(ex.id)[0] ?? 999 },
+  { key: 'lastName', label: 'NOM', width: 16, get: (ex) => ex.lastName || ex.name },
+  { key: 'firstName', label: 'Prénom', width: 14, get: (ex) => ex.firstName },
+  { key: 'products', label: 'Objets vendus', width: 32, get: (ex) => ex.products },
+  { key: 'category', label: 'Catégorie', width: 14, get: (ex) => ex.category },
+  { key: 'tables', label: 'Tables', width: 8, get: (ex) => Number(ex.tables) || 1, num: true },
+  { key: 'grilles', label: 'Grilles', width: 8, get: (ex) => Number(ex.grilles) || 0, num: true },
+  { key: 'electricity', label: 'Électricité', width: 11, get: (ex) => (ex.electricity ? 'oui' : 'non') },
+  { key: 'payment', label: 'Règlement (€)', width: 13, get: (ex) => (ex.payment === '' || ex.payment == null ? '' : Number(String(ex.payment).replace(',', '.')) || ex.payment), num: true },
+  { key: 'phone', label: 'Téléphone', width: 16, get: (ex) => ex.phone },
+  { key: 'email', label: 'E-mail', width: 30, get: (ex) => ex.email },
+  { key: 'zone', label: 'Emplacement souhaité', width: 18, get: (ex) => (ex.zone ? regionLabel(ex.zone) : '') },
+  { key: 'avoid', label: 'À séparer de', width: 22, get: (ex) => (ex.avoid || []).map((id) => exById(id)?.name).filter(Boolean).join(', ') },
+  { key: 'notes', label: 'Notes', width: 30, get: (ex) => ex.notes },
+];
+const listUi = { sort: 'lastName', dir: 1, search: '' };
+let fileHandle = null; // fichier mis à jour automatiquement (navigateurs compatibles)
+let fileHandleEvent = null;
+let syncTimer = null;
+
+function sortedExhibitors(ev = cur()) {
+  const col = LIST_COLUMNS.find((c) => c.key === listUi.sort) || LIST_COLUMNS[1];
+  const key = col.sort || col.get;
+  return [...ev.exhibitors].sort((a, b) => {
+    const x = key(a), y = key(b);
+    const r = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'fr', { numeric: true });
+    return r * listUi.dir || a.name.localeCompare(b.name, 'fr');
+  });
+}
+
+function listRows(ev = cur()) {
+  const exs = [...ev.exhibitors].sort((a, b) => (a.lastName || a.name).localeCompare(b.lastName || b.name, 'fr'));
+  return [LIST_COLUMNS.map((c) => c.label), ...exs.map((ex) => LIST_COLUMNS.map((c) => c.get(ex)))];
+}
+
+const listHash = (ev = cur()) => JSON.stringify(listRows(ev));
+const exportInfo = (ev = cur()) => (db.listExports || {})[ev.id] || null;
+const isLinked = () => fileHandle && fileHandleEvent === cur().id;
+const listOutdated = (ev = cur()) => ev.exhibitors.length > 0 && (!exportInfo(ev) || exportInfo(ev).hash !== listHash(ev));
+
+function markExported(how) {
+  db.listExports ||= {};
+  db.listExports[cur().id] = { hash: listHash(), at: Date.now(), how };
+  save();
+  renderListBadge();
+  if ($('#list-dialog').open) renderListStatus();
+}
+
+function renderListBadge() {
+  $('#list-badge').hidden = !listOutdated();
+}
+
+function renderListStatus() {
+  const info = exportInfo();
+  const ev = cur();
+  let html;
+  if (isLinked()) {
+    html = `🔗 Mise à jour automatique de <b>${esc(fileHandle.name)}</b>${info ? ` · dernière écriture le ${formatDateTime(info.at)}` : ''}. <button class="link" data-list="unlink">Arrêter</button>`;
+  } else if (!ev.exhibitors.length) html = 'Aucun exposant pour l’instant.';
+  else if (!info) html = '⚠️ Cette liste n’a encore jamais été exportée.';
+  else if (listOutdated()) html = `⚠️ <b>La liste a changé</b> depuis le dernier export (${formatDateTime(info.at)}, ${esc(info.how)}). Pensez à la réexporter.`;
+  else html = `✓ Liste à jour : dernier export le ${formatDateTime(info.at)} (${esc(info.how)}).`;
+  const el = $('#list-status');
+  el.innerHTML = html;
+  el.className = 'list-status ' + (listOutdated() && !isLinked() ? 'outdated' : 'ok');
+}
+
+function renderList() {
+  const ev = cur();
+  const q = listUi.search.trim().toLowerCase();
+  const exs = sortedExhibitors(ev).filter((ex) => !q || LIST_COLUMNS.map((c) => c.get(ex)).join(' ').toLowerCase().includes(q));
+  const totals = {
+    tables: ev.exhibitors.reduce((s, e) => s + (Number(e.tables) || 1), 0),
+    grilles: ev.exhibitors.reduce((s, e) => s + (Number(e.grilles) || 0), 0),
+    elec: ev.exhibitors.filter((e) => e.electricity).length,
+    pay: ev.exhibitors.reduce((s, e) => s + (Number(String(e.payment || '').replace(',', '.')) || 0), 0),
+  };
+  $('#list-count').textContent = `(${ev.exhibitors.length})`;
+  $('#list-table').innerHTML = `
+    <thead><tr>${LIST_COLUMNS.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''} ${listUi.sort === c.key ? 'sorted' : ''}">${esc(c.label)}${listUi.sort === c.key ? (listUi.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead>
+    <tbody>${exs.map((ex) => `<tr data-ex="${ex.id}">${LIST_COLUMNS.map((c) => {
+      const v = c.get(ex);
+      if (c.key === 'electricity') return `<td>${ex.electricity ? '⚡ oui' : 'non'}</td>`;
+      if (c.key === 'lastName') return `<td><span class="dot" style="background:${colorFor(ex)}"></span> <b>${esc(v)}</b></td>`;
+      if (c.key === 'tablesNums') return `<td>${v ? esc(v) : '<span class="warn-text">non placé</span>'}</td>`;
+      return `<td class="${c.num ? 'num' : ''}">${esc(v === 0 && c.key === 'grilles' ? '' : v)}</td>`;
+    }).join('')}</tr>`).join('') || `<tr><td colspan="${LIST_COLUMNS.length}" class="muted">Aucun exposant.</td></tr>`}</tbody>
+    <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(ev.exhibitors.length, 'exposant')}</td><td class="num"><b>${totals.tables}</b></td><td class="num"><b>${totals.grilles}</b></td><td><b>${totals.elec}</b> ⚡</td><td class="num"><b>${totals.pay}</b> €</td><td colspan="${LIST_COLUMNS.length - 9}"></td></tr></tfoot>`;
+  renderListStatus();
+}
+
+function openList() {
+  listUi.search = '';
+  $('#list-search').value = '';
+  $('#list-link').hidden = !('showSaveFilePicker' in window);
+  renderList();
+  if (!$('#list-dialog').open) $('#list-dialog').showModal();
+}
+
+const listFileName = (ext) => `exposants-${slug(cur().name)}.${ext}`;
+const xlsxBlob = () => buildXlsx(listRows(), { sheetName: 'Exposants', widths: LIST_COLUMNS.map((c) => c.width) });
+
+function saveBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+function exportCsv() {
+  const csv = listRows().map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  saveBlob(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), listFileName('csv'));
+  markExported('CSV');
+}
+
+function exportXlsx() {
+  saveBlob(xlsxBlob(), listFileName('xlsx'));
+  markExported('Excel');
+}
+
+function printList() {
+  const ev = cur();
+  const rows = listRows(ev);
+  $('#print-area').innerHTML = `<div class="print-page">
+    <h1>Exposants — ${esc(ev.name)}${ev.date ? ' — ' + formatDate(ev.date) : ''}</h1>
+    <p class="print-sub">Grenier à Sel de Gainneville · ${plural(ev.exhibitors.length, 'exposant')} · imprimé le ${formatDateTime(Date.now())}</p>
+    <table class="print-table"><thead><tr>${rows[0].map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.slice(1).map((r) => `<tr>${r.map((v) => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  window.print();
+  markExported('impression');
+}
+
+async function linkFile() {
+  try {
+    fileHandle = await window.showSaveFilePicker({
+      suggestedName: listFileName('xlsx'),
+      types: [{ description: 'Classeur Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
+    });
+    fileHandleEvent = cur().id;
+    await writeLinkedFile();
+    toast(`La liste sera réécrite dans ${fileHandle.name} à chaque modification (tant que l'outil reste ouvert).`, 'success');
+  } catch (e) {
+    if (e.name !== 'AbortError') toast("Impossible d'utiliser ce fichier.", 'error');
+  }
+}
+
+async function writeLinkedFile() {
+  if (!isLinked()) return;
+  try {
+    const w = await fileHandle.createWritable();
+    await w.write(xlsxBlob());
+    await w.close();
+    markExported(`fichier ${fileHandle.name}`);
+  } catch (e) {
+    toast(`Écriture impossible dans ${fileHandle.name} (fichier ouvert dans Excel ?). Nouvel essai à la prochaine modification.`, 'warning');
+  }
+}
+
+function scheduleFileSync() {
+  renderListBadge();
+  if ($('#list-dialog').open) renderList();
+  if (!fileHandle) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(writeLinkedFile, 1200);
+}
+
+$('#btn-list').onclick = openList;
+$('#list-search').addEventListener('input', (e) => { listUi.search = e.target.value; renderList(); });
+$('#list-dialog').addEventListener('click', (e) => {
+  const th = e.target.closest('th[data-sort]');
+  if (th) {
+    if (listUi.sort === th.dataset.sort) listUi.dir *= -1; else { listUi.sort = th.dataset.sort; listUi.dir = 1; }
+    renderList();
+    return;
+  }
+  const act = e.target.closest('[data-list]')?.dataset.list;
+  if (act === 'close') $('#list-dialog').close();
+  if (act === 'xlsx') exportXlsx();
+  if (act === 'csv') exportCsv();
+  if (act === 'print') printList();
+  if (act === 'link') linkFile();
+  if (act === 'unlink') { fileHandle = null; fileHandleEvent = null; renderListStatus(); }
+  const row = e.target.closest('tr[data-ex]');
+  if (row && !act) openExhibitorDialog(row.dataset.ex);
+});
+
 // ---------- Événements ----------
 
 const eventDialog = $('#event-dialog');
@@ -1395,15 +1590,7 @@ dataMenu.addEventListener('click', (e) => {
   if (act === 'export-all') download(`grenier-a-sel-tous-les-evenements.json`, JSON.stringify({ app: 'grenier-a-sel', version: 1, events: db.events }, null, 2), 'application/json');
   if (act === 'import') $('#import-file').click();
   if (act === 'export-png') exportPNG();
-  if (act === 'export-csv') {
-    const rows = [['Exposant', 'Prénom', 'NOM', 'Objets vendus', 'Catégorie', 'Tables demandées', 'Tables attribuées', 'Grilles', 'Électricité', 'Règlement (€)', 'Téléphone', 'E-mail', 'Emplacement souhaité', 'À séparer de', 'Notes']];
-    for (const ex of [...ev.exhibitors].sort((a, b) => a.name.localeCompare(b.name, 'fr'))) {
-      rows.push([ex.name, ex.firstName, ex.lastName, ex.products, ex.category, ex.tables, tableNums(ex.id).join(' '), ex.grilles || '', ex.electricity ? 'oui' : 'non', ex.payment,
-        ex.phone, ex.email, ex.zone ? regionLabel(ex.zone) : '', (ex.avoid || []).map((id) => exById(id)?.name).filter(Boolean).join(', '), ex.notes]);
-    }
-    const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-    download(`exposants-${slug(ev.name)}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
-  }
+  if (act === 'list') openList();
 });
 
 $('#import-file').addEventListener('change', async (e) => {
@@ -1716,6 +1903,45 @@ renderRoom();
 save();
 refresh();
 fitView();
+
+// ---------- Application installable (PWA) ----------
+
+const standalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let installPrompt = null;
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker', e));
+}
+// Demande au navigateur de ne pas effacer les données locales (plans, exposants).
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  $('#btn-install').hidden = false;
+});
+window.addEventListener('appinstalled', () => {
+  $('#btn-install').hidden = true;
+  installPrompt = null;
+  toast("Application installée sur l'écran d'accueil", 'success');
+});
+if (!standalone() && isIOS) $('#btn-install').hidden = false;
+
+$('#btn-install').onclick = async () => {
+  if (installPrompt) {
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') $('#btn-install').hidden = true;
+    installPrompt = null;
+    return;
+  }
+  $('#install-steps').innerHTML = isIOS
+    ? `<ol><li>Ouvrez cette page dans <b>Safari</b>.</li><li>Touchez le bouton <b>Partager</b> <span class="kbd">⬆︎</span> (en bas sur iPhone, en haut sur iPad).</li><li>Choisissez <b>« Sur l'écran d'accueil »</b>, puis <b>Ajouter</b>.</li></ol>`
+    : `<ol><li>Ouvrez le menu du navigateur <span class="kbd">⋮</span>.</li><li>Choisissez <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.</li></ol>`;
+  $('#install-dialog').showModal();
+};
+$('#install-close').onclick = () => $('#install-dialog').close();
 
 // Accès pour le débogage depuis la console.
 window.grenier = { get event() { return cur(); }, evaluate: () => evaluate(cur()) };
