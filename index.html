@@ -170,6 +170,7 @@
       <nav class="tabs" role="tablist">
         <button role="tab" data-tab="exhibitors" class="active">Exposants</button>
         <button role="tab" data-tab="checks">Contrôles <span id="checks-badge" class="badge"></span></button>
+        <button role="tab" data-tab="day">Jour J</button>
         <button role="tab" data-tab="plans">Versions</button>
         <button role="tab" data-tab="settings">Réglages</button>
       </nav>
@@ -198,6 +199,19 @@
       <section class="tab-panel" id="tab-plans" hidden></section>
       <section class="tab-panel" id="tab-settings" hidden></section>
       <section class="tab-panel" id="tab-list" hidden></section>
+      <section class="tab-panel" id="tab-day" hidden>
+        <div class="day-head">
+          <div class="day-count" id="day-count"></div>
+          <div class="day-bar"><span id="day-bar"></span></div>
+        </div>
+        <input type="search" id="day-search" placeholder="Chercher un exposant ou un n° de table…" autocomplete="off">
+        <ul class="day-list" id="day-list"></ul>
+        <div class="btn-row day-actions">
+          <button class="btn small" data-day="labels">Imprimer les étiquettes de table</button>
+          <button class="btn small" data-day="entrance">Imprimer le plan d'entrée</button>
+          <button class="btn small" data-day="reset">Remettre les arrivées à zéro</button>
+        </div>
+      </section>
     </aside>
   </main>
   <footer class="app-foot" id="app-foot"></footer>

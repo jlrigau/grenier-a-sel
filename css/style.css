@@ -860,3 +860,37 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
 .notify-actions { flex-wrap: wrap; }
 /* Filtres de la liste : passent à la ligne au besoin */
 #ex-filters { flex-wrap: wrap; }
+
+/* Jour J */
+.day-head { display: grid; gap: 6px; }
+.day-count { font-size: 15px; }
+.day-count b { font-size: 22px; font-weight: 800; color: var(--green); }
+.day-bar { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.day-bar span { display: block; height: 100%; background: var(--green); border-radius: 999px; transition: width .2s; }
+#day-search { width: 100%; box-sizing: border-box; border-radius: 999px; margin: 10px 0; }
+.day-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.day-item { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 10px; border-radius: 16px; background: var(--surface-2); }
+.day-item.arrived { background: var(--green-soft); }
+.day-table { min-width: 44px; height: 36px; padding: 0 6px; border-radius: 12px; background: #fff; display: grid; place-items: center; font-weight: 800; font-size: 15px; box-sizing: border-box; }
+.day-table.none { color: var(--ink-3); }
+.day-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.day-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.day-main small { color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.day-call { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--green); background: #fff; flex-shrink: 0; }
+.day-check { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border-strong); background: #fff; color: transparent; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; padding: 0; }
+.day-check[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+.day-actions { margin: 12px 0; }
+.print-labels, .entrance-body { display: none; }
+@media print {
+  .print-labels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; }
+  .label { border: 1.5px dashed #b9ae98; border-radius: 4mm; height: 88mm; padding: 6mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; text-align: center; break-inside: avoid; }
+  .label-num { font-size: 34px; font-weight: 800; color: #2d6a4f; margin-top: auto; }
+  .label-name { font-size: 26px; font-weight: 800; margin-top: 4mm; }
+  .label-sub { font-size: 13px; color: #5a6b61; margin-top: 2mm; }
+  .label-ev { font-size: 10px; color: #8a978f; margin-top: auto; }
+  .entrance-body { display: grid; grid-template-columns: 1fr 62mm; gap: 6mm; }
+  .entrance .print-plan { height: 175mm; }
+  .entrance-index { margin: 0; padding: 0; list-style: none; font-size: 10.5px; }
+  .entrance-index li { padding: 1.2mm 0; border-bottom: 1px solid #eee5d3; }
+  .entrance-index b { display: inline-block; min-width: 9mm; color: #2d6a4f; }
+}
