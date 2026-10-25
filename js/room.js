@@ -116,15 +116,17 @@ export function defaultTables() {
   return tables;
 }
 
-// Positions supposées des prises : à vérifier et ajuster sur place (mode « Prises »).
-export function defaultOutlets() {
-  return [
-    [3, 0], [9, 0], [15, 0], [20, 0],
-    [0, 6.5], [0, 11.5],
-    [4.5, 14.9], [13, 14.9], [20.5, 14.9],
-    [25, 5.5], [25, 9.5],
-    [8.4, 21.5],
-  ].map(([x, y], i) => ({ id: 'p' + (i + 1), x, y }));
+// Électricité : seules les tables le long des murs de la grande salle y ont accès
+// (ni l'îlot central, ni les tables devant ou sur la scène, ni le hall).
+export function wallPower(t) {
+  const inSalle = t.x >= 0 && t.x <= 25 && t.y >= 0 && t.y <= 14.9;
+  if (!inSalle || t.x > 22.5 || regionAt(t.x, t.y) === 'ilot') return false;
+  return t.x < 2.6 || t.y < 2.6 || t.y > 12.3;
+}
+
+// Une table peut forcer la règle (power: true/false), sinon la règle des murs s'applique.
+export function hasPower(t) {
+  return typeof t.power === 'boolean' ? t.power : wallPower(t);
 }
 
 function round(v) {

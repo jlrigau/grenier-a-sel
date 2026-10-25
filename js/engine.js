@@ -1,9 +1,8 @@
 // Moteur de contraintes : vérification d'un plan et placement automatique.
-import { ROOM, regionAt, regionLabel } from './room.js';
+import { ROOM, regionAt, regionLabel, hasPower } from './room.js';
 
 export const DEFAULT_SETTINGS = {
   avoidDistance: 2.5, // distance minimale entre deux exposants « à séparer »
-  elecDistance: 3, // distance maximale table ↔ prise
   nearDistance: 4, // distance souhaitée pour « proche de »
   adjacencyGap: 0.5, // écart max pour que deux tables soient contiguës
   flagSameCategory: true, // signaler deux exposants de même catégorie côte à côte
@@ -71,11 +70,10 @@ export function buildContext(ev) {
       if (d <= s.adjacencyGap) { adj[i].push(j); adj[j].push(i); }
     }
   }
-  const outlets = ev.outlets || [];
-  const elecDist = rects.map((r) => outlets.reduce((m, o) => Math.min(m, pointRectDist(o.x, o.y, r)), Infinity));
+  const power = tables.map(hasPower);
   const region = tables.map((t) => regionAt(t.x, t.y));
   const { issues: geo, bad } = geometryIssues(tables, rects);
-  return { s, tables, n, index, rects, dist, adj, elecDist, region, geo, badTables: bad };
+  return { s, tables, n, index, rects, dist, adj, power, region, geo, badTables: bad };
 }
 
 function geometryIssues(tables, rects) {
@@ -172,10 +170,8 @@ export function evaluate(ev) {
     if (g.length > want) issues.push({ ...base, severity: 'info', type: 'extra', msg: `${ex.name} occupe ${g.length} tables pour ${want} demandée(s)` });
     if (!isConnected(g, ctx.adj)) issues.push({ ...base, severity: 'warning', type: 'split', msg: `${ex.name} : tables non contiguës (${numsOf(g)})` });
     if (ex.electricity) {
-      const d = Math.min(...g.map((i) => ctx.elecDist[i]));
-      if (d > s.elecDistance) {
-        const detail = Number.isFinite(d) ? `prise la plus proche à ${fmt(d)}` : 'aucune prise définie';
-        issues.push({ ...base, severity: 'error', type: 'elec', msg: `${ex.name} a besoin d'électricité : ${detail} (max ${fmt(s.elecDistance)})` });
+      if (!g.some((i) => ctx.power[i])) {
+        issues.push({ ...base, severity: 'error', type: 'elec', msg: `${ex.name} a besoin d'électricité : table${g.length > 1 ? 's' : ''} ${numsOf(g)} sans accès (seules les tables le long des murs en ont)` });
       }
     }
     if (ex.zone && g.some((i) => ctx.region[i] !== ex.zone)) {
@@ -312,7 +308,7 @@ function prepare(ev, ctx) {
 }
 
 function makeCost(ctx, P, { stability }) {
-  const { s, n, dist, adj, elecDist, region, badTables } = ctx;
+  const { s, n, dist, adj, power, region, badTables } = ctx;
   const gd = (ga, gb) => {
     let m = Infinity;
     for (const a of ga) for (const b of gb) { const d = dist[a * n + b]; if (d < m) m = d; }
@@ -326,9 +322,7 @@ function makeCost(ctx, P, { stability }) {
       if (!g) { c += WEIGHTS.unplaced; continue; }
       if (g.length < size[e]) c += WEIGHTS.missingTable * (size[e] - g.length);
       if (exs[e].electricity) {
-        let m = Infinity;
-        for (const t of g) if (elecDist[t] < m) m = elecDist[t];
-        if (m > s.elecDistance) c += WEIGHTS.elec + (Number.isFinite(m) ? m * 10 : 0);
+        if (!g.some((t) => power[t])) c += WEIGHTS.elec;
       }
       if (exs[e].zone) for (const t of g) if (region[t] !== exs[e].zone) { c += WEIGHTS.zone; break; }
       for (const t of g) if (badTables.has(t)) { c += WEIGHTS.badTable; break; }

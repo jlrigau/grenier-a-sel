@@ -31,6 +31,7 @@
       <label for="event-select" class="sr-only">Événement</label>
       <select id="event-select"></select>
       <button id="btn-new-event" class="btn">+ Événement</button>
+      <button id="plan-status" class="plan-pill"></button>
     </div>
     <div class="top-actions">
       <button id="btn-undo" class="btn icon" title="Annuler (Ctrl+Z)">↶</button>
@@ -42,6 +43,7 @@
           <button data-action="export-all">Exporter tous les événements (.json)</button>
           <button data-action="import">Importer un fichier .json…</button>
           <button data-action="export-csv">Liste des exposants (.csv)</button>
+          <button data-action="export-png">Image du plan (.png)</button>
         </div>
       </div>
       <button id="btn-print" class="btn">Imprimer</button>
@@ -53,6 +55,7 @@
       <nav class="tabs" role="tablist">
         <button role="tab" data-tab="exhibitors" class="active">Exposants</button>
         <button role="tab" data-tab="checks">Contrôles <span id="checks-badge" class="badge"></span></button>
+        <button role="tab" data-tab="plans">Plans <span id="plans-badge" class="dot-badge" hidden title="Plan en cours non enregistré"></span></button>
         <button role="tab" data-tab="settings">Réglages</button>
       </nav>
 
@@ -75,6 +78,7 @@
       </section>
 
       <section class="tab-panel" id="tab-checks" hidden></section>
+      <section class="tab-panel" id="tab-plans" hidden></section>
       <section class="tab-panel" id="tab-settings" hidden></section>
     </aside>
 
@@ -83,7 +87,7 @@
         <div class="segmented" id="mode-switch">
           <button data-mode="place" class="active" title="Attribuer les tables aux exposants">Placement</button>
           <button data-mode="layout" title="Déplacer, ajouter, pivoter des tables">Tables</button>
-          <button data-mode="outlets" title="Positionner les prises électriques">Prises ⚡</button>
+          <button data-mode="power" title="Voir et modifier les tables qui ont l'électricité">Électricité ⚡</button>
         </div>
         <div class="toolbar-extra" id="toolbar-extra"></div>
         <div class="zoom">
@@ -94,16 +98,15 @@
       </div>
       <div class="mode-hint" id="mode-hint"></div>
       <div class="notice" id="notice" hidden>
-        Plan reconstitué d'après le plan papier : les cotes sont approximatives et
-        <b>la position des prises électriques est à vérifier</b> (mode « Prises »).
+        Plan reconstitué d'après le plan papier : les cotes sont approximatives.
+        <b>Électricité : seules les tables le long des murs y ont accès</b> (pas l'îlot central ni la scène) ; exceptions possibles en mode « Électricité ».
+        Pensez à <b>enregistrer vos plans</b> (onglet « Plans ») et à les exporter pour les garder.
         <button class="link" id="notice-close">Compris</button>
       </div>
       <svg id="plan" xmlns="http://www.w3.org/2000/svg">
         <g id="viewport">
           <g id="room-layer"></g>
-          <g id="outlet-radius-layer"></g>
           <g id="table-layer"></g>
-          <g id="outlet-layer"></g>
         </g>
       </svg>
       <div class="inspector" id="inspector" hidden></div>
@@ -129,7 +132,7 @@
         <label>Nombre de tables
           <input name="tables" type="number" min="1" max="8" step="1" value="1">
         </label>
-        <label class="check span2"><input type="checkbox" name="electricity"> A besoin d'électricité (prise à proximité)</label>
+        <label class="check span2"><input type="checkbox" name="electricity"> A besoin d'électricité (tables le long des murs uniquement)</label>
         <label class="span2">Emplacement souhaité
           <select name="zone"></select>
         </label>
@@ -188,7 +191,7 @@
     </form>
   </dialog>
 
-  <input type="file" id="import-file" accept=".json,application/json" hidden>
+  <input type="file" id="import-file" accept=".json,application/json" multiple hidden>
   <div id="print-area"></div>
 
   <script type="module" src="js/app.js"></script>

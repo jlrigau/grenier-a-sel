@@ -1,4 +1,4 @@
-import { ROOM, REGIONS, TABLE_SIZE, defaultTables, defaultOutlets, regionAt, regionLabel } from './room.js';
+import { ROOM, REGIONS, TABLE_SIZE, defaultTables, regionAt, regionLabel, hasPower, wallPower } from './room.js';
 import { evaluate, optimize, placeOne, groupAround, tableRect, DEFAULT_SETTINGS, SEVERITY_RANK } from './engine.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
@@ -22,8 +22,8 @@ const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeE
 function newEvent(name, date = '') {
   return {
     id: uid('ev'), name, date, notes: '',
-    tables: defaultTables(), outlets: defaultOutlets(),
-    exhibitors: [], assignments: {}, categoryColors: {},
+    tables: defaultTables(),
+    exhibitors: [], assignments: {}, categoryColors: {}, plans: [], activePlanId: null,
     settings: { ...DEFAULT_SETTINGS }, createdAt: Date.now(), updatedAt: Date.now(),
   };
 }
@@ -39,7 +39,9 @@ function normalizeEvent(ev) {
   out.exhibitors = (ev.exhibitors || []).map((e) => newExhibitor({ ...e, avoid: e.avoid || [], near: e.near || [] }));
   out.categoryColors = ev.categoryColors || {};
   out.assignments = ev.assignments || {};
-  out.outlets = ev.outlets || [];
+  delete out.outlets;
+  delete out.settings.elecDistance;
+  out.plans = ev.plans || [];
   out.tables = (ev.tables || []).map((t) => ({ w: TABLE_SIZE.w, h: TABLE_SIZE.h, rot: 0, blocked: false, ...t }));
   out.exhibitors.forEach((e) => ensureCategoryColor(out, e.category));
   return out;
@@ -240,7 +242,7 @@ const countErrors = () => evaluate(cur()).issues.filter((i) => i.severity === 'e
 
 const ui = {
   mode: 'place', tab: 'exhibitors', filter: 'all', search: '',
-  selectedEx: null, selectedTable: null, selectedOutlet: null,
+  selectedEx: null, selectedTable: null,
   view: { s: 30, tx: 0, ty: 0 },
 };
 let evaluation = evaluate(cur());
@@ -249,7 +251,6 @@ function refresh() {
   const ev = cur();
   if (ui.selectedEx && !exById(ui.selectedEx)) ui.selectedEx = null;
   if (ui.selectedTable && !tableById(ui.selectedTable)) ui.selectedTable = null;
-  if (ui.selectedOutlet && !ev.outlets.some((o) => o.id === ui.selectedOutlet)) ui.selectedOutlet = null;
   evaluation = evaluate(ev);
   renderHeader();
   renderSidebar();
@@ -288,7 +289,9 @@ function renderSidebar() {
   badge.className = 'badge ' + (errors ? 'error' : warnings ? 'warning' : '');
   if (ui.tab === 'exhibitors') renderExhibitors();
   if (ui.tab === 'checks') renderChecks();
+  if (ui.tab === 'plans') renderPlans();
   if (ui.tab === 'settings') renderSettings();
+  renderPlanStatus();
 }
 
 function exStatus(ex) {
@@ -409,8 +412,6 @@ function renderSettings() {
     <h3>Contraintes</h3>
     <label>Distance minimale entre exposants « à séparer »
       <span class="with-unit"><input type="number" step="0.5" min="0" max="20" data-set="avoidDistance" value="${s.avoidDistance}"> m</span></label>
-    <label>Distance maximale entre une table et une prise
-      <span class="with-unit"><input type="number" step="0.5" min="0" max="30" data-set="elecDistance" value="${s.elecDistance}"> m</span></label>
     <label>Distance pour « proche de »
       <span class="with-unit"><input type="number" step="0.5" min="0" max="30" data-set="nearDistance" value="${s.nearDistance}"> m</span></label>
     <label>Écart max. pour que deux tables soient contiguës
@@ -418,10 +419,12 @@ function renderSettings() {
     <label class="check"><input type="checkbox" data-set="flagSameCategory" ${s.flagSameCategory ? 'checked' : ''}> Éviter deux exposants de même catégorie côte à côte</label>
 
     <h3>Salle</h3>
-    <p class="muted">${ev.tables.length} tables · ${ev.outlets.length} prises électriques. Les prises se placent en mode « Prises ⚡ », les tables en mode « Tables ».</p>
+    <p class="muted">${ev.tables.length} tables, dont ${ev.tables.filter(hasPower).length} avec accès à l'électricité.
+      Règle : seules les tables le long des murs de la grande salle ont l'électricité (pas l'îlot central, ni la scène et ses abords, ni le hall).
+      Exceptions possibles en mode « Électricité ».</p>
     <div class="btn-row">
       <button class="btn small" data-act="reset-tables">Revenir aux 48 tables du plan</button>
-      <button class="btn small" data-act="reset-outlets">Prises par défaut</button>
+      <button class="btn small" data-act="reset-power">Électricité : revenir à la règle des murs</button>
     </div>
 
     <h3>Données</h3>
@@ -507,7 +510,9 @@ function tablesSVG(ev, { print = false } = {}) {
     if (!print && ui.selectedTable === t.id) cls.push('selected');
     if (ex && sel && ex.id === sel.id) cls.push('rel-self');
     if (ex && related.has(ex.id)) cls.push('rel-' + related.get(ex.id));
-    if (sel && !ex && ui.mode === 'place') cls.push('dim');
+    if (sel && !ex && ui.mode === 'place' && !(sel.electricity && hasPower(t))) cls.push('dim');
+    const powered = hasPower(t);
+    if (!print && ui.mode === 'power') cls.push(powered ? 'power-on' : 'power-off');
     const fill = ex ? colorFor(ex, ev) : t.blocked ? '#e7e5e4' : '#ffffff';
     const L = Math.max(w, h);
     const fs = 0.25;
@@ -524,30 +529,21 @@ function tablesSVG(ev, { print = false } = {}) {
       <rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="0.05" fill="${fill}"/>
       <text class="tnum" x="${-w / 2 + 0.07}" y="${-h / 2 + 0.2}">${t.num}</text>
       ${name ? `<text class="tname ${ex ? '' : 'muted'}" y="0.09"${rot}>${esc(name)}</text>` : ''}
+      ${powered ? `<circle class="pwr" cx="${w / 2 - 0.11}" cy="${h / 2 - 0.11}" r="0.07"><title>Électricité disponible</title></circle>` : ''}
       ${badges.length ? `<text class="tbadge" x="${bx}" y="${by}" text-anchor="${vertical ? 'start' : 'end'}">${badges.join('')}</text>` : ''}
     </g>`;
   }).join('');
 }
 
-function outletsSVG(ev) {
-  return ev.outlets.map((o) => `<g class="outlet ${ui.selectedOutlet === o.id ? 'selected' : ''}" data-outlet="${o.id}" transform="translate(${o.x} ${o.y})">
-    <circle r="0.28"/><text y="0.11">⚡</text></g>`).join('');
-}
-
 function renderMap() {
   const ev = cur();
   $('#table-layer').innerHTML = tablesSVG(ev);
-  $('#outlet-layer').innerHTML = outletsSVG(ev);
-  const sel = ui.selectedEx ? exById(ui.selectedEx) : null;
-  const showRadius = ui.mode === 'outlets' || (sel && sel.electricity);
-  const R = ev.settings.elecDistance;
-  $('#outlet-radius-layer').innerHTML = showRadius ? ev.outlets.map((o) => `<circle class="elec-radius" cx="${o.x}" cy="${o.y}" r="${R}"/>`).join('') : '';
   svg.dataset.mode = ui.mode;
   $$('#mode-switch button').forEach((b) => b.classList.toggle('active', b.dataset.mode === ui.mode));
   const hints = {
     place: 'Glissez un exposant de la liste sur une table · glissez une table occupée vers une autre pour déplacer ou échanger (Maj = ajouter une table) · cliquez une table pour l\'attribuer',
     layout: 'Glissez les tables pour les déplacer · R : pivoter · Suppr : supprimer · flèches : ajuster · Ctrl+D : dupliquer',
-    outlets: 'Cliquez sur le plan pour ajouter une prise · glissez pour déplacer · Suppr pour supprimer. Le cercle montre la portée autorisée.',
+    power: 'Tables en jaune : électricité disponible (par défaut, celles le long des murs). Cliquez une table pour ajouter ou retirer l\'électricité.',
   };
   $('#mode-hint').textContent = hints[ui.mode];
   $('#toolbar-extra').innerHTML = ui.mode === 'layout' ? '<button class="btn small" data-act="add-table">+ Table</button>' : '';
@@ -565,7 +561,8 @@ function renderLegend() {
   $('#legend').innerHTML = `
     <span><i class="lg-free"></i>Libre</span>
     <span><i class="lg-error"></i>Conflit</span>
-    <span><i class="lg-outlet">⚡</i>Prise</span>
+    <span><i class="lg-power"></i>Électricité disponible</span>
+    <span>⚡ Besoin d'électricité</span>
     <span><i class="lg-clear"></i>Passage à dégager</span>
     ${items.join('')}`;
 }
@@ -575,14 +572,8 @@ function renderLegend() {
 function renderInspector() {
   const box = $('#inspector');
   const ev = cur();
-  if (ui.mode === 'outlets' && ui.selectedOutlet) {
-    box.hidden = false;
-    box.innerHTML = `<div class="insp-head"><b>Prise électrique</b><button class="icon-btn" data-act="close-insp">×</button></div>
-      <div class="btn-row"><button class="btn small danger" data-act="delete-outlet">Supprimer la prise</button></div>`;
-    return;
-  }
   const t = ui.selectedTable && tableById(ui.selectedTable);
-  if (!t || ui.mode === 'outlets') { box.hidden = true; return; }
+  if (!t || ui.mode === 'power') { box.hidden = true; return; }
   box.hidden = false;
   const ex = exById(ev.assignments[t.id]);
   const issues = evaluation.issues.filter((i) => i.tables.includes(t.id) && i.type !== 'unplaced');
@@ -600,6 +591,12 @@ function renderInspector() {
         <label>Longueur <input type="number" step="0.1" min="0.4" max="5" data-tprop="w" value="${t.w}"></label>
         <label>Largeur <input type="number" step="0.1" min="0.4" max="3" data-tprop="h" value="${t.h}"></label>
       </div>
+      <label>Électricité
+        <select data-act="power-select">
+          <option value="auto" ${typeof t.power !== 'boolean' ? 'selected' : ''}>Automatique (${wallPower(t) ? 'oui, le long d\'un mur' : 'non'})</option>
+          <option value="yes" ${t.power === true ? 'selected' : ''}>Oui</option>
+          <option value="no" ${t.power === false ? 'selected' : ''}>Non</option>
+        </select></label>
       <label class="check"><input type="checkbox" data-act="toggle-blocked" ${t.blocked ? 'checked' : ''}> Non attribuable (organisation, réservée…)</label>
       ${issuesHtml}`;
     return;
@@ -610,6 +607,7 @@ function renderInspector() {
     return `<option value="${e.id}" ${ex && ex.id === e.id ? 'selected' : ''}>${esc(e.name)}${e.electricity ? ' ⚡' : ''}${nums.length ? ` (table ${nums.join(', ')})` : ' — non placé'}</option>`;
   }).join('');
   box.innerHTML = `${head}
+    <div class="muted">${hasPower(t) ? '⚡ Électricité disponible' : 'Pas d\'électricité'}</div>
     ${ex ? `<div class="insp-ex"><span class="dot" style="background:${colorFor(ex)}"></span><b>${esc(ex.name)}</b>${ex.category ? `<span class="muted"> · ${esc(ex.category)}</span>` : ''}</div>` : '<div class="muted">Table libre</div>'}
     <label>Attribuer à
       <select data-act="assign-select"><option value="">— Libre —</option>${options}</select>
@@ -720,13 +718,11 @@ svg.addEventListener('pointerdown', (e) => {
     return;
   }
   const tEl = e.target.closest('[data-table]');
-  const oEl = e.target.closest('[data-outlet]');
   const p = toWorld(e.clientX, e.clientY);
   const start = { cx: e.clientX, cy: e.clientY, p };
   const ev = cur();
-  if (ui.mode === 'outlets' && oEl) {
-    const o = ev.outlets.find((x) => x.id === oEl.dataset.outlet);
-    drag = { type: 'outlet', id: o.id, el: oEl, start, orig: { x: o.x, y: o.y }, moved: false };
+  if (ui.mode === 'power' && tEl && e.button !== 1) {
+    drag = { type: 'power', tableId: tEl.dataset.table, start, orig: { tx: ui.view.tx, ty: ui.view.ty }, moved: false };
   } else if (ui.mode === 'layout' && tEl && e.button !== 1) {
     const t = tableById(tEl.dataset.table);
     drag = { type: 'table', id: t.id, el: tEl, start, orig: { x: t.x, y: t.y }, moved: false };
@@ -754,11 +750,11 @@ svg.addEventListener('pointermove', (e) => {
   const dx = e.clientX - drag.start.cx, dy = e.clientY - drag.start.cy;
   if (!drag.moved && Math.hypot(dx, dy) < 4) return;
   drag.moved = true;
-  if (drag.type === 'pan' || (drag.type === 'assign' && !drag.exId)) {
+  if (drag.type === 'pan' || drag.type === 'power' || (drag.type === 'assign' && !drag.exId)) {
     ui.view.tx = drag.orig.tx + dx;
     ui.view.ty = drag.orig.ty + dy;
     applyView();
-  } else if (drag.type === 'table' || drag.type === 'outlet') {
+  } else if (drag.type === 'table') {
     const p = toWorld(e.clientX, e.clientY);
     drag.x = r2(snap(drag.orig.x + p.x - drag.start.p.x));
     drag.y = r2(snap(drag.orig.y + p.y - drag.start.p.y));
@@ -782,23 +778,20 @@ function endPointer(e) {
   if (e.type === 'pointercancel') { hideGhost(); renderMap(); return; }
   const ev = cur();
   if (d.type === 'pan' && !d.moved) {
-    if (ui.mode === 'outlets') {
-      const p = toWorld(e.clientX, e.clientY);
-      const id = uid('p');
-      ui.selectedOutlet = id;
-      commit((ev) => ev.outlets.push({ id, x: r2(snap(p.x)), y: r2(snap(p.y)) }));
-    } else if (ui.selectedTable || ui.selectedEx || ui.selectedOutlet) {
-      ui.selectedTable = null; ui.selectedEx = null; ui.selectedOutlet = null;
+    if (ui.selectedTable || ui.selectedEx) {
+      ui.selectedTable = null; ui.selectedEx = null;
       refresh();
     }
   } else if (d.type === 'table') {
     ui.selectedTable = d.id;
     if (d.moved) commit((ev) => { const t = tableById(d.id, ev); t.x = d.x; t.y = d.y; });
     else refresh();
-  } else if (d.type === 'outlet') {
-    ui.selectedOutlet = d.id;
-    if (d.moved) commit((ev) => { const o = ev.outlets.find((x) => x.id === d.id); o.x = d.x; o.y = d.y; });
-    else refresh();
+  } else if (d.type === 'power') {
+    if (!d.moved) commit((ev) => {
+      const t = tableById(d.tableId, ev);
+      const next = !hasPower(t);
+      if (next === wallPower(t)) delete t.power; else t.power = next;
+    });
   } else if (d.type === 'assign') {
     if (d.moved && !d.exId) {
       // simple déplacement de la vue
@@ -930,7 +923,7 @@ $('#tab-settings').addEventListener('click', (e) => {
   if (act === 'reset-tables' && confirm('Remplacer toutes les tables par les 48 tables du plan papier ? Les attributions seront perdues. (Annulable avec Ctrl+Z)')) {
     commit((ev) => { ev.tables = defaultTables(); ev.assignments = {}; });
   }
-  if (act === 'reset-outlets' && confirm('Remettre les prises électriques par défaut ?')) commit((ev) => { ev.outlets = defaultOutlets(); });
+  if (act === 'reset-power') commit((ev) => { ev.tables.forEach((t) => { delete t.power; }); });
   if (act === 'delete-event') {
     const ev = cur();
     if (!confirm(`Supprimer définitivement l'événement « ${ev.name} » ?`)) return;
@@ -946,7 +939,6 @@ $('#mode-switch').addEventListener('click', (e) => {
   const b = e.target.closest('[data-mode]');
   if (!b) return;
   ui.mode = b.dataset.mode;
-  ui.selectedOutlet = null;
   refresh();
 });
 
@@ -971,11 +963,10 @@ $('#inspector').addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (!act || act === 'assign-select' || act === 'toggle-blocked') return;
   const tid = ui.selectedTable;
-  if (act === 'close-insp') { ui.selectedTable = null; ui.selectedOutlet = null; refresh(); }
+  if (act === 'close-insp') { ui.selectedTable = null; refresh(); }
   if (act === 'rotate') commit((ev) => { const t = tableById(tid, ev); t.rot = (t.rot + 90) % 180; });
   if (act === 'duplicate') addTable(tableById(tid));
   if (act === 'delete-table') deleteSelected();
-  if (act === 'delete-outlet') deleteSelected();
   if (act === 'free-table') commit((ev) => { delete ev.assignments[tid]; });
   if (act === 'edit-owner') openExhibitorDialog(cur().assignments[tid]);
   if (act === 'add-to-selected') assignToTable(ui.selectedEx, tid, { addOnly: true });
@@ -986,6 +977,12 @@ $('#inspector').addEventListener('change', (e) => {
   if (el.dataset.act === 'assign-select') {
     if (el.value) assignToTable(el.value, tid);
     else commit((ev) => { delete ev.assignments[tid]; });
+  }
+  if (el.dataset.act === 'power-select') {
+    commit((ev) => {
+      const t = tableById(tid, ev);
+      if (el.value === 'auto') delete t.power; else t.power = el.value === 'yes';
+    });
   }
   if (el.dataset.act === 'toggle-blocked') {
     commit((ev) => {
@@ -1006,10 +1003,6 @@ function deleteSelected() {
     const id = ui.selectedTable;
     ui.selectedTable = null;
     commit((ev) => { ev.tables = ev.tables.filter((t) => t.id !== id); delete ev.assignments[id]; });
-  } else if (ui.mode === 'outlets' && ui.selectedOutlet) {
-    const id = ui.selectedOutlet;
-    ui.selectedOutlet = null;
-    commit((ev) => { ev.outlets = ev.outlets.filter((o) => o.id !== id); });
   }
 }
 
@@ -1020,7 +1013,7 @@ document.addEventListener('keydown', (e) => {
   if (mod && e.key.toLowerCase() === 'z' && !isTyping()) { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && e.key.toLowerCase() === 'y' && !isTyping()) { e.preventDefault(); redo(); return; }
   if (isTyping()) return;
-  if (e.key === 'Escape') { ui.selectedTable = null; ui.selectedEx = null; ui.selectedOutlet = null; refresh(); return; }
+  if (e.key === 'Escape') { ui.selectedTable = null; ui.selectedEx = null; refresh(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); return; }
   if (ui.mode === 'layout' && ui.selectedTable) {
     const id = ui.selectedTable;
@@ -1157,7 +1150,6 @@ $('#event-form').addEventListener('submit', (e) => {
     ev = newEvent(name, f.date.value);
     if (f.base.value !== 'default') {
       ev.tables = structuredClone(src.tables);
-      ev.outlets = structuredClone(src.outlets);
       ev.settings = { ...src.settings };
     }
     if (f.base.value === 'exhibitors') {
@@ -1175,7 +1167,7 @@ $('#event-form').addEventListener('submit', (e) => {
 });
 $('#event-select').addEventListener('change', (e) => {
   db.currentId = e.target.value;
-  ui.selectedEx = null; ui.selectedTable = null; ui.selectedOutlet = null;
+  ui.selectedEx = null; ui.selectedTable = null;
   save();
   refresh();
 });
@@ -1208,6 +1200,7 @@ dataMenu.addEventListener('click', (e) => {
   if (act === 'export-event') download(`grenier-a-sel-${slug(ev.name)}.json`, JSON.stringify({ app: 'grenier-a-sel', version: 1, events: [ev] }, null, 2), 'application/json');
   if (act === 'export-all') download(`grenier-a-sel-tous-les-evenements.json`, JSON.stringify({ app: 'grenier-a-sel', version: 1, events: db.events }, null, 2), 'application/json');
   if (act === 'import') $('#import-file').click();
+  if (act === 'export-png') exportPNG();
   if (act === 'export-csv') {
     const rows = [['Exposant', 'Catégorie', 'Tables demandées', 'Tables attribuées', 'Électricité', 'Emplacement souhaité', 'À séparer de', 'Contact', 'Notes']];
     for (const ex of [...ev.exhibitors].sort((a, b) => a.name.localeCompare(b.name, 'fr'))) {
@@ -1220,11 +1213,22 @@ dataMenu.addEventListener('click', (e) => {
 });
 
 $('#import-file').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
+  const files = [...e.target.files];
   e.target.value = '';
-  if (!file) return;
+  for (const file of files) await importFile(file);
+});
+
+async function importFile(file) {
   try {
     const data = JSON.parse(await file.text());
+    if (data.kind === 'plan' || data.kind === 'plans') {
+      const n = importPlans(data);
+      if (!n) throw new Error('format');
+      ui.tab = 'plans';
+      refresh();
+      toast(`${plural(n, 'plan importé', 'plans importés')} dans « ${cur().name} ». Cliquez « Ouvrir » pour l'afficher.`, 'success');
+      return;
+    }
     const events = Array.isArray(data.events) ? data.events : data.tables ? [data] : null;
     if (!events || !events.length) throw new Error('format');
     const ids = new Set(db.events.map((x) => x.id));
@@ -1247,9 +1251,219 @@ $('#import-file').addEventListener('change', async (e) => {
     refresh();
     toast(`${plural(events.length, 'événement importé', 'événements importés')}`, 'success');
   } catch (err) {
-    toast('Fichier invalide : impossible de l’importer.', 'error');
+    toast(`${file.name} : fichier invalide, impossible de l’importer.`, 'error');
+  }
+}
+
+// ---------- Plans enregistrés ----------
+
+const PLAN_FIELDS = ['tables', 'exhibitors', 'assignments', 'settings', 'categoryColors'];
+const planData = (ev) => structuredClone(Object.fromEntries(PLAN_FIELDS.map((f) => [f, ev[f]])));
+const samePlan = (ev, plan) => JSON.stringify(planData(ev)) === JSON.stringify(plan.data);
+const activePlan = (ev = cur()) => ev.plans.find((p) => p.id === ev.activePlanId) || null;
+
+function isUnsaved(ev = cur()) {
+  const p = activePlan(ev);
+  if (p) return !samePlan(ev, p);
+  return ev.exhibitors.length > 0 && !ev.plans.some((pl) => samePlan(ev, pl));
+}
+
+function formatDateTime(ts) {
+  return new Date(ts).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function planSummary(plan) {
+  const r = evaluate(plan.data);
+  return {
+    placed: plan.data.exhibitors.filter((e) => r.exTables.has(e.id)).length,
+    total: plan.data.exhibitors.length,
+    errors: r.issues.filter((i) => i.severity === 'error').length,
+  };
+}
+
+function planThumb(data) {
+  const B = ROOM.bounds;
+  const spaces = ROOM.spaces.map((s) => `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" class="thumb-${s.kind}"/>`).join('');
+  const tables = data.tables.map((t) => {
+    const r = tableRect(t);
+    const ex = data.exhibitors.find((e) => e.id === data.assignments[t.id]);
+    return `<rect x="${r.x0}" y="${r.y0}" width="${r.x1 - r.x0}" height="${r.y1 - r.y0}" fill="${ex ? colorFor(ex, data) : '#fff'}" class="thumb-table"/>`;
+  }).join('');
+  return `<svg class="plan-thumb" viewBox="-0.3 -0.3 ${B.w + 0.6} ${B.h + 0.6}" aria-hidden="true">${spaces}<rect x="0" y="0" width="${B.w}" height="${B.h}" class="thumb-wall"/>${tables}</svg>`;
+}
+
+function renderPlanStatus() {
+  const ev = cur();
+  const p = activePlan(ev);
+  const unsaved = isUnsaved(ev);
+  $('#plans-badge').hidden = !unsaved;
+  const pill = $('#plan-status');
+  pill.className = 'plan-pill' + (unsaved ? ' unsaved' : '');
+  pill.textContent = p ? `Plan : ${p.name}${unsaved ? ' (modifié)' : ' ✓'}` : unsaved ? 'Plan non enregistré' : `${plural(ev.plans.length, 'plan enregistré', 'plans enregistrés')}`;
+  pill.title = 'Voir les plans enregistrés';
+}
+$('#plan-status').onclick = () => { ui.tab = 'plans'; renderSidebar(); };
+
+function renderPlans() {
+  const ev = cur();
+  const act = activePlan(ev);
+  const unsaved = isUnsaved(ev);
+  const status = act
+    ? (unsaved ? `Basé sur « ${esc(act.name)} » — <b>modifié, non enregistré</b>` : `« ${esc(act.name)} » — enregistré ✓`)
+    : (unsaved ? '<b>Plan en cours non enregistré</b>' : 'Rien de nouveau à enregistrer');
+  const plans = [...ev.plans].sort((a, b) => b.savedAt - a.savedAt);
+  $('#tab-plans').innerHTML = `
+    <h3>Plan en cours</h3>
+    <p class="plan-status ${unsaved ? 'unsaved' : ''}">${status}</p>
+    ${act && unsaved ? `<button class="btn primary block" data-act="plan-update" data-id="${act.id}">Mettre à jour « ${esc(act.name)} »</button>` : ''}
+    <form class="save-row" data-form="save-plan">
+      <input name="name" maxlength="60" required value="Version ${ev.plans.length + 1}" aria-label="Nom du plan">
+      <button class="btn ${act && unsaved ? '' : 'primary'}" title="Enregistrer comme nouveau plan">Enregistrer</button>
+    </form>
+
+    <h3>Plans enregistrés (${plans.length})</h3>
+    ${plans.length ? `<ul class="plan-list">${plans.map((p) => {
+      const s = planSummary(p);
+      const open = p.id === ev.activePlanId;
+      return `<li class="plan-item ${open ? 'active' : ''}">
+        ${planThumb(p.data)}
+        <div class="plan-info">
+          <div><b>${esc(p.name)}</b>${open ? ' <span class="tag">ouvert</span>' : ''}</div>
+          <small>Enregistré le ${formatDateTime(p.savedAt)}</small>
+          <small>${s.placed}/${s.total} exposants placés · ${s.errors ? `<span class="err">${plural(s.errors, 'conflit')}</span>` : 'aucun conflit'}</small>
+          <div class="btn-row">
+            <button class="btn small primary" data-act="plan-open" data-id="${p.id}">Ouvrir</button>
+            <button class="btn small" data-act="plan-export" data-id="${p.id}">Exporter</button>
+            <button class="btn small" data-act="plan-rename" data-id="${p.id}">Renommer</button>
+            <button class="btn small danger" data-act="plan-delete" data-id="${p.id}" title="Supprimer">🗑</button>
+          </div>
+        </div>
+      </li>`;
+    }).join('')}</ul>` : '<p class="muted">Aucun plan enregistré pour cet événement.</p>'}
+
+    <h3>Fichiers</h3>
+    <div class="btn-row">
+      <button class="btn" data-act="plan-import">Importer des plans (.json)…</button>
+      ${plans.length ? '<button class="btn" data-act="plan-export-all">Exporter tous les plans</button>' : ''}
+    </div>
+    <p class="muted">Un plan enregistré conserve les tables, les exposants et leurs places.
+      Exportez-le en fichier .json pour le garder ou l'envoyer, puis réimportez-le ici pour le revoir ou le reprendre.
+      « Données → Image du plan » donne une image à partager.</p>`;
+}
+
+function exportPlanFile(plans, filename) {
+  const ev = cur();
+  const payload = plans.length === 1
+    ? { app: 'grenier-a-sel', version: 1, kind: 'plan', event: ev.name, eventDate: ev.date, plan: plans[0] }
+    : { app: 'grenier-a-sel', version: 1, kind: 'plans', event: ev.name, eventDate: ev.date, plans };
+  download(filename, JSON.stringify(payload, null, 2), 'application/json');
+}
+
+function importPlans(data) {
+  const list = data.kind === 'plan' ? [data.plan] : data.plans;
+  let n = 0;
+  commit((ev) => {
+    for (const raw of list || []) {
+      if (!raw || !raw.data || !Array.isArray(raw.data.tables)) continue;
+      let name = raw.name || 'Plan importé';
+      if (ev.plans.some((p) => p.name === name)) name += ' (importé)';
+      ev.plans.push({ id: uid('pl'), name, savedAt: raw.savedAt || Date.now(), data: planData(normalizeEvent({ name, ...raw.data })) });
+      n++;
+    }
+  });
+  return n;
+}
+
+function openPlan(id) {
+  const ev = cur();
+  const p = ev.plans.find((x) => x.id === id);
+  if (!p) return;
+  if (ev.activePlanId === id && !isUnsaved(ev)) { toast(`« ${p.name} » est déjà ouvert`, 'info'); return; }
+  if (isUnsaved(ev) && !confirm(`Le plan en cours contient des modifications non enregistrées.\nOuvrir « ${p.name} » quand même ?\n(Vous pourrez revenir en arrière avec Ctrl+Z)`)) return;
+  ui.selectedEx = null; ui.selectedTable = null;
+  commit((ev) => { Object.assign(ev, structuredClone(p.data)); ev.activePlanId = id; });
+  toast(`Plan « ${p.name} » ouvert`, 'success', { label: 'Annuler', fn: undo });
+}
+
+$('#tab-plans').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = e.target.name.value.trim();
+  if (!name) return;
+  const id = uid('pl');
+  commit((ev) => {
+    ev.plans.push({ id, name, savedAt: Date.now(), data: planData(ev) });
+    ev.activePlanId = id;
+  });
+  toast(`Plan « ${name} » enregistré`, 'success', { label: 'Exporter', fn: () => exportPlanFile([activePlan()], `plan-${slug(cur().name)}-${slug(name)}.json`) });
+});
+
+$('#tab-plans').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const ev = cur();
+  const p = ev.plans.find((x) => x.id === btn.dataset.id);
+  switch (btn.dataset.act) {
+    case 'plan-open': openPlan(p.id); break;
+    case 'plan-update':
+      commit((ev) => { const x = ev.plans.find((y) => y.id === p.id); x.data = planData(ev); x.savedAt = Date.now(); });
+      toast(`Plan « ${p.name} » mis à jour`, 'success');
+      break;
+    case 'plan-export': exportPlanFile([p], `plan-${slug(ev.name)}-${slug(p.name)}.json`); break;
+    case 'plan-export-all': exportPlanFile(ev.plans, `plans-${slug(ev.name)}.json`); break;
+    case 'plan-import': $('#import-file').click(); break;
+    case 'plan-rename': {
+      const name = prompt('Nouveau nom du plan', p.name);
+      if (name && name.trim()) commit((ev) => { ev.plans.find((y) => y.id === p.id).name = name.trim(); });
+      break;
+    }
+    case 'plan-delete':
+      if (!confirm(`Supprimer le plan enregistré « ${p.name} » ?`)) return;
+      commit((ev) => {
+        ev.plans = ev.plans.filter((y) => y.id !== p.id);
+        if (ev.activePlanId === p.id) ev.activePlanId = null;
+      });
+      toast(`Plan « ${p.name} » supprimé`, 'info', { label: 'Annuler', fn: undo });
+      break;
   }
 });
+
+// Image PNG du plan en cours (styles intégrés pour un fichier autonome).
+async function exportPNG() {
+  const ev = cur();
+  const B = ROOM.bounds;
+  const css = [...document.styleSheets].flatMap((sh) => {
+    try { return [...sh.cssRules].map((r) => r.cssText); } catch { return []; }
+  }).join('\n');
+  const vb = [-0.8, -2.2, B.w + 1.6, B.h + 4.4];
+  const scale = 70;
+  const p = activePlan(ev);
+  const title = `${ev.name}${ev.date ? ' — ' + formatDate(ev.date) : ''}${p ? ' · ' + p.name : ''}`;
+  const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${vb[2] * scale}" height="${vb[3] * scale}" viewBox="${vb.join(' ')}">
+    <style>${css} text { font-family: system-ui, sans-serif; }</style>
+    ${$('#svg-defs').innerHTML}
+    <rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="#ffffff"/>
+    <text x="0" y="-1.2" style="font-size:0.7px;font-weight:700;fill:#1f2933">${esc(title)}</text>
+    <g>${roomSVG()}</g><g>${tablesSVG(ev, { print: true })}</g>
+  </svg>`;
+  const img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markup);
+  try {
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    canvas.toBlob((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `plan-${slug(ev.name)}${p ? '-' + slug(p.name) : ''}.png`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }, 'image/png');
+  } catch {
+    toast("Impossible de générer l'image. Utilisez « Imprimer » puis « Enregistrer en PDF ».", 'error');
+  }
+}
 
 // ---------- Impression ----------
 
@@ -1259,10 +1473,10 @@ $('#btn-print').onclick = () => {
   const list = [...ev.exhibitors].sort((a, b) => (tableNums(a.id)[0] ?? 999) - (tableNums(b.id)[0] ?? 999) || a.name.localeCompare(b.name, 'fr'));
   $('#print-area').innerHTML = `
     <div class="print-page">
-      <h1>${esc(ev.name)}${ev.date ? ' — ' + formatDate(ev.date) : ''}</h1>
+      <h1>${esc(ev.name)}${ev.date ? ' — ' + formatDate(ev.date) : ''}${activePlan(ev) ? ` · ${esc(activePlan(ev).name)}${isUnsaved(ev) ? ' (modifié)' : ''}` : ''}</h1>
       <p class="print-sub">Grenier à Sel de Gainneville · ${ev.exhibitors.length} exposants · ${ev.tables.length} tables</p>
       <svg viewBox="-0.8 -1.2 ${B.w + 1.6} ${B.h + 2.8}" class="print-plan">
-        <g>${roomSVG()}</g><g>${tablesSVG(ev, { print: true })}</g><g>${outletsSVG(ev)}</g>
+        <g>${roomSVG()}</g><g>${tablesSVG(ev, { print: true })}</g>
       </svg>
     </div>
     <div class="print-page">

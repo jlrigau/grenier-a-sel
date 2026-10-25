@@ -23,13 +23,17 @@ on place les exposants sur les tables en glisser-déposer, et l'outil vérifie
     déplaçant le moins d'exposants possible ;
   - « Tout réorganiser » : recalcule tout le plan (les exposants verrouillés 🔒
     ne bougent pas).
-- **Contrôles en direct** : électricité trop loin, exposants à séparer trop
+- **Contrôles en direct** : table sans électricité, exposants à séparer trop
   proches, tables non contiguës, mauvaise zone, même catégorie côte à côte,
   tables qui se chevauchent ou bloquent une sortie de secours…
 - **Mode Tables** : ajouter, déplacer, pivoter, redimensionner, supprimer des tables,
   ou les marquer « non attribuables ».
-- **Mode Prises ⚡** : placer les prises électriques (leur position par défaut est
-  une estimation **à vérifier sur place**).
+- **Électricité** : seules les tables le long des murs de la grande salle y ont
+  accès (pas l'îlot central, ni la scène et ses abords, ni le hall). Le mode
+  « Électricité ⚡ » montre ces tables et permet d'ajouter des exceptions.
+- **Plans enregistrés** (onglet « Plans ») : enregistrer plusieurs versions d'un
+  plan, les rouvrir, les comparer en vignette, les exporter en .json et les
+  réimporter plus tard ; export en image PNG via *Données → Image du plan*.
 - Plusieurs **événements**, annuler/rétablir (Ctrl+Z / Ctrl+Y), **impression**
   (plan + liste des exposants), export **CSV**, export/import **JSON**.
 
