@@ -567,6 +567,8 @@ function renderSettings() {
     <div class="btn-row">
       <button class="btn small danger" data-act="delete-event">Supprimer cet événement</button>
     </div>
+
+    <details class="diag"><summary>Infos techniques</summary><pre id="diag"></pre></details>
   `;
 }
 
@@ -2161,24 +2163,26 @@ $('#install-close').onclick = () => $('#install-dialog').close();
   update();
 })();
 
-// App installée : quand on tire la page vers le bas tout en haut, iOS montre la couleur de fond
-// de la page au-dessus de l'en-tête. Cette couleur est verte sur la moitié haute de la page et
-// crème sur la moitié basse (le rebond du bas reste crème). Le changement se fait loin des bords,
-// donc jamais pendant un rebond : pas de scintillement.
-(function greenOverscroll() {
-  const root = document.documentElement;
-  let frame = 0;
-  const update = () => {
-    frame = 0;
-    const max = Math.max(0, root.scrollHeight - window.innerHeight);
-    root.classList.toggle('at-top', window.scrollY < max / 2 || max < 40);
-  };
-  const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
-  window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', schedule);
-  new ResizeObserver(schedule).observe(document.body);
-  update();
-})();
+// Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
+const APP_VERSION = 'v22';
+const diag = { gap: null };
+function screenInfo() {
+  const vv = window.visualViewport;
+  const top = Math.round($('.topbar').getBoundingClientRect().top);
+  return { scrollY: Math.round(window.scrollY), top, innerH: window.innerHeight, vvH: vv ? Math.round(vv.height) : '-', vvTop: vv ? Math.round(vv.offsetTop) : '-', screenH: screen.height };
+}
+function noteGap() {
+  const info = screenInfo();
+  if (info.top > 2 && info.scrollY <= 0) diag.gap = { ...info, at: new Date().toLocaleTimeString('fr-FR') };
+}
+['scroll', 'resize', 'focusout', 'touchend'].forEach((t) => window.addEventListener(t, () => setTimeout(noteGap, 300), { passive: true }));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(noteGap, 300));
+setInterval(() => {
+  const box = document.getElementById('diag');
+  if (!box || !box.closest('details').open) return;
+  const fmt = (o) => Object.entries(o).map(([k, v]) => `${k} ${v}`).join(' · ');
+  box.textContent = `Version ${APP_VERSION} · ${standalone() ? 'app installée' : 'navigateur'}\nMaintenant : ${fmt(screenInfo())}\nDernier décalage vu : ${diag.gap ? fmt(diag.gap) : 'aucun'}`;
+}, 500);
 
 // ---------- Fenêtres : fermeture facile ----------
 // Chaque fenêtre se ferme par sa croix, en touchant à côté, avec Échap ou avec le « retour »
