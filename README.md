@@ -102,7 +102,7 @@ aucun nom de personne, téléphone ou e-mail. Il peut être supprimé dans
 
 ## Design
 
-Police Inter (fournie dans `vendor/fonts`, licence OFL), icônes vectorielles
+Police Plus Jakarta Sans (fournie dans `vendor/fonts`, licence OFL), logo `icons/logo.svg` (halle à pignon et cristal de sel), icônes vectorielles
 intégrées (`index.html`, symboles `#i-*`), jetons de couleur et d'espacement
 dans `css/style.css` (`:root`).
 

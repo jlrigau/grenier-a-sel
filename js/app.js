@@ -5,10 +5,15 @@ import { buildXlsx } from './xlsx.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
 const NOTICE_KEY = 'grenier-a-sel/notice-dismissed';
-const PALETTE = ['#b2ccff', '#fedf89', '#a6f4c5', '#fecdca', '#d9d6fe', '#99f6e0', '#fcceee', '#fddcab', '#c7d7fe', '#d0f8ab', '#b9e6fe', '#e4e7ec', '#fecdd6', '#d6bbfb'];
-const OLD_PALETTE = ['#8ecae6', '#f6bd60', '#90be6d', '#f28482', '#cdb4db', '#84a59d', '#ffafcc', '#d4a373', '#f9e07f', '#9fa8da', '#a8e6cf', '#ffab91', '#b0bec5', '#c5d86d'];
+const PALETTE = ['#b9d3e8', '#f7d98a', '#c4dfb0', '#f5b9ad', '#d9c8ec', '#a8d8cc', '#f5c8dc', '#e8cba4', '#c3c9ec', '#dbe6a3', '#b3dbe9', '#e6ddd2', '#f2c3b0', '#cfe3d6'];
+// Palettes des versions précédentes : converties à l'ouverture d'un événement.
+const OLD_PALETTES = [
+  ['#8ecae6', '#f6bd60', '#90be6d', '#f28482', '#cdb4db', '#84a59d', '#ffafcc', '#d4a373', '#f9e07f', '#9fa8da', '#a8e6cf', '#ffab91', '#b0bec5', '#c5d86d'],
+  ['#b2ccff', '#fedf89', '#a6f4c5', '#fecdca', '#d9d6fe', '#99f6e0', '#fcceee', '#fddcab', '#c7d7fe', '#d0f8ab', '#b9e6fe', '#e4e7ec', '#fecdd6', '#d6bbfb'],
+];
+const migrateColor = (c) => { for (const old of OLD_PALETTES) if (old.includes(c)) return PALETTE[old.indexOf(c)]; return c; };
 const ic = (name, cls = '') => `<svg class="i${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const NO_CATEGORY_COLOR = '#eaecf0';
+const NO_CATEGORY_COLOR = '#ece4d9';
 const SNAP = 0.05;
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -49,7 +54,7 @@ function normalizeEvent(ev) {
     delete ex.contact;
     return ex;
   });
-  out.categoryColors = Object.fromEntries(Object.entries(ev.categoryColors || {}).map(([k, c]) => [k, OLD_PALETTE.includes(c) ? PALETTE[OLD_PALETTE.indexOf(c)] : c]));
+  out.categoryColors = Object.fromEntries(Object.entries(ev.categoryColors || {}).map(([k, c]) => [k, migrateColor(c)]));
   if (out.name === 'Exemple – Marché de Noël') { out.demo = true; out.name = 'Démonstration (données fictives)'; }
   if (out.demo) {
     const renamed = { 'Miel': 'Miel des Coteaux', 'Confitures': 'Rucher du Vexin', 'Crêpes': 'Crêpes de Mamie', 'Chocolats': 'Chocolaterie Martin', 'Bijoux': 'Bijoux Lune', 'Perles': 'Atelier Perles', 'Poterie': 'Poterie du Grès', 'Luminaires': 'Luminaires Récup', 'Bougies': 'Bougies & Cie', 'Couture': 'Couture Créative', 'Tricots': 'Tricots de Laine', 'Livres': 'Librairie Ambulante', 'Association': 'Club photo', 'Savons': 'Savonnerie du Val', 'Jouets en bois': 'Jouets en bois', 'Peintures': 'Atelier Aquarelle' };
@@ -563,7 +568,7 @@ function tablesSVG(ev, { print = false } = {}) {
     if (sel && !ex && ui.mode === 'place' && !(sel.electricity && hasPower(t))) cls.push('dim');
     const powered = hasPower(t);
     if (!print && ui.mode === 'power') cls.push(powered ? 'power-on' : 'power-off');
-    const fill = ex ? colorFor(ex, ev) : t.blocked ? '#f2f4f7' : '#ffffff';
+    const fill = ex ? colorFor(ex, ev) : t.blocked ? '#f4eee6' : '#ffffff';
     const L = Math.max(w, h);
     const fs = 0.25;
     const maxChars = Math.max(3, Math.floor((L - 0.15) / (fs * 0.56)));

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Grenier à sel : grande halle à pignon, cristal de sel dans le pignon -->
+  <rect width="64" height="64" rx="15" fill="#c2512b"/>
+  <path d="M11 32.5 L32 17.5 L53 32.5 V51 H11 Z" fill="#fffaf5"/>
+  <path d="M6 34 L32 14.5 L58 34" fill="none" stroke="#fffaf5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="15" y="38" width="7" height="5.5" rx="1.2" fill="#eab59e"/>
+  <rect x="42" y="38" width="7" height="5.5" rx="1.2" fill="#eab59e"/>
+  <path d="M26.5 51 V40.5 a1.5 1.5 0 0 1 1.5 -1.5 H36 a1.5 1.5 0 0 1 1.5 1.5 V51 Z" fill="#c2512b"/>
+  <path d="M32 39.5 V51" stroke="#fffaf5" stroke-width="1.2"/>
+  <path d="M32 21.6 L36.4 24 L32 26.4 L27.6 24 Z" fill="#f6d9cb"/>
+  <path d="M27.6 24 L32 26.4 V31.2 L27.6 28.8 Z" fill="#c2512b"/>
+  <path d="M36.4 24 L32 26.4 V31.2 L36.4 28.8 Z" fill="#e0805b"/>
+</svg>

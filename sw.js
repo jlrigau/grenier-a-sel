@@ -1,6 +1,6 @@
 // Service worker : permet d'installer l'outil et de l'utiliser sans connexion.
 // Aucune donnée d'exposant ne passe ici : elles restent dans le navigateur (localStorage).
-const VERSION = 'v6';
+const VERSION = 'v7';
 const SHELL = `grenier-shell-${VERSION}`;
 const OCR = 'grenier-ocr-v1'; // moteur de lecture des fiches (gros fichiers qui ne changent pas)
 
@@ -8,7 +8,7 @@ const SHELL_FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/app.js', 'js/engine.js', 'js/room.js', 'js/fiches.js', 'js/xlsx.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png',
-  'vendor/fonts/inter-latin-wght-normal.woff2', 'vendor/fonts/inter-latin-ext-wght-normal.woff2',
+  'vendor/fonts/plus-jakarta-sans-latin-wght-normal.woff2', 'vendor/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2', 'icons/logo.svg',
 ];
 const OCR_FILES = [
   'vendor/tesseract/tesseract.min.js', 'vendor/tesseract/worker.min.js',
