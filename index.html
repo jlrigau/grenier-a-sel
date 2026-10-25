@@ -62,6 +62,7 @@
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
     <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></symbol>
     <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
     <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
     <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4M12 2v13"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
@@ -116,6 +117,22 @@
     <div id="backup-alert" class="backup-alert" hidden></div>
   </section>
 
+  <section class="welcome" id="welcome" hidden>
+    <div class="welcome-body">
+      <b>Bienvenue !</b>
+      <ol>
+        <li><b>Créez votre événement</b> (nom, date).</li>
+        <li><b>Ajoutez les exposants</b> : photo ou saisie des fiches papier, ou lien d'inscription en ligne (Réglages).</li>
+        <li><b>Placez-les</b> : automatiquement selon les contraintes, puis ajustez sur le plan.</li>
+      </ol>
+      <p class="muted small">L'événement « Démonstration » contient des exposants imaginaires pour essayer sans risque. Vos données restent sur cet appareil.</p>
+      <div class="btn-row">
+        <button class="btn primary" data-welcome="create">Créer mon événement</button>
+        <button class="btn" data-welcome="demo">Explorer la démonstration</button>
+      </div>
+    </div>
+  </section>
+
   <section class="stats-row" id="stats-row"></section>
 
   <main class="layout">
@@ -131,6 +148,7 @@
         <div class="zoom">
           <button class="round small" id="zoom-out" title="Dézoomer"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
           <button class="round small" id="zoom-fit" title="Ajuster à l'écran"><svg class="i" aria-hidden="true"><use href="#i-maximize"/></svg></button>
+          <button class="round small" id="plan-full" title="Plan en plein écran" aria-label="Plan en plein écran"><svg class="i" aria-hidden="true"><use href="#i-expand"/></svg></button>
           <button class="round small" id="zoom-in" title="Zoomer"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
         </div>
       </div>

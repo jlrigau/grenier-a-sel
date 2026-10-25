@@ -431,6 +431,7 @@ function refresh() {
 function renderHeader() {
   const ev = cur();
   $('#event-name').textContent = ev.name;
+  $('#welcome').hidden = !!db.welcomed || db.events.some((e) => !e.demo);
   const need = backupNeeded();
   const alert = $('#backup-alert');
   alert.hidden = !need;
@@ -644,12 +645,6 @@ function renderSettings() {
     <label>Notes <textarea data-ev="notes" rows="2">${esc(ev.notes)}</textarea></label>
 
     <h3>Contraintes</h3>
-    <label>Distance minimale entre exposants « à séparer »
-      <span class="with-unit"><input type="number" step="0.5" min="0" max="20" data-set="avoidDistance" value="${s.avoidDistance}"> m</span></label>
-    <label>Distance pour « proche de »
-      <span class="with-unit"><input type="number" step="0.5" min="0" max="30" data-set="nearDistance" value="${s.nearDistance}"> m</span></label>
-    <label>Écart max. pour que deux tables soient contiguës
-      <span class="with-unit"><input type="number" step="0.1" min="0" max="3" data-set="adjacencyGap" value="${s.adjacencyGap}"> m</span></label>
     <label class="check"><input type="checkbox" data-set="flagSameCategory" ${s.flagSameCategory ? 'checked' : ''}> Éviter deux exposants de même catégorie côte à côte</label>
     <label class="check"><input type="checkbox" data-set="grillesOnIlot" ${s.grillesOnIlot ? 'checked' : ''}> Placer de préférence sur l'îlot central les exposants qui ont des grilles</label>
     <label>Nombre de grilles disponibles (0 = ne pas vérifier)
@@ -657,6 +652,15 @@ function renderSettings() {
 
     <h3>Fiches d'inscription</h3>
     <label class="check"><input type="checkbox" data-set="autoPlaceFiches" ${s.autoPlaceFiches ? 'checked' : ''}> Placer automatiquement chaque nouvelle fiche (et réajuster le plan si besoin)</label>
+
+    <details class="advanced" ${ui.advancedOpen ? 'open' : ''}><summary>Réglages avancés</summary>
+    <h3>Distances</h3>
+    <label>Distance minimale entre exposants « à séparer »
+      <span class="with-unit"><input type="number" step="0.5" min="0" max="20" data-set="avoidDistance" value="${s.avoidDistance}"> m</span></label>
+    <label>Distance pour « proche de »
+      <span class="with-unit"><input type="number" step="0.5" min="0" max="30" data-set="nearDistance" value="${s.nearDistance}"> m</span></label>
+    <label>Écart max. pour que deux tables soient contiguës
+      <span class="with-unit"><input type="number" step="0.1" min="0" max="3" data-set="adjacencyGap" value="${s.adjacencyGap}"> m</span></label>
 
     <h3>Salle</h3>
     <p class="muted">${ev.tables.length} tables, dont ${ev.tables.filter(hasPower).length} avec accès à l'électricité.
@@ -666,6 +670,7 @@ function renderSettings() {
       <button class="btn small" data-act="reset-tables">Revenir aux 48 tables du plan</button>
       <button class="btn small" data-act="reset-power">Électricité : revenir à la règle des murs</button>
     </div>
+    </details>
 
     <h3>Inscription en ligne</h3>
     <p class="muted">Envoyez ce lien aux exposants : ils remplissent la fiche sur leur téléphone et vous la renvoient par message. Collez ensuite le message avec « Coller une inscription ». Rien n'est stocké sur le site.</p>
@@ -940,6 +945,16 @@ svg.addEventListener('wheel', (e) => {
 $('#zoom-in').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.3); };
 $('#zoom-out').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.3); };
 $('#zoom-fit').onclick = fitView;
+// Plan en plein écran (surtout sur téléphone) ; « retour » ou le même bouton pour en sortir.
+function setPlanFull(on, fromHistory = false) {
+  if (on === document.documentElement.classList.contains('plan-full')) return;
+  document.documentElement.classList.toggle('plan-full', on);
+  $('#plan-full').title = on ? 'Quitter le plein écran' : 'Plan en plein écran';
+  if (on) history.pushState({ page: 'plan-full' }, '');
+  else if (!fromHistory && history.state && history.state.page === 'plan-full') { ignoreNextPop = true; history.back(); }
+  requestAnimationFrame(fitView);
+}
+$('#plan-full').onclick = () => setPlanFull(!document.documentElement.classList.contains('plan-full'));
 new ResizeObserver(() => fitView()).observe(svg);
 
 // ---------- Glisser-déposer ----------
@@ -1230,6 +1245,7 @@ $('#tab-checks').addEventListener('click', (e) => {
   refresh();
 });
 
+$('#tab-settings').addEventListener('toggle', (e) => { if (e.target.matches('details.advanced')) ui.advancedOpen = e.target.open; }, true);
 $('#tab-settings').addEventListener('change', (e) => {
   const el = e.target;
   if (el.dataset.org) { db.organizer = { ...(db.organizer || {}), [el.dataset.org]: el.value.trim() }; save(); return; }
@@ -1892,6 +1908,12 @@ $('#list-body').addEventListener('click', (e) => {
 
 $('#backup-alert').addEventListener('click', (e) => { if (e.target.closest('[data-backup]')) backupAll(); });
 $('#btn-share').onclick = () => shareEvent();
+$('#welcome').addEventListener('click', (e) => {
+  const act = e.target.closest('[data-welcome]')?.dataset.welcome;
+  if (!act) return;
+  db.welcomed = true; save(); renderHeader();
+  if (act === 'create') openNewEvent();
+});
 
 const eventDialog = $('#event-dialog');
 function openNewEvent() {
@@ -2555,7 +2577,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v44';
+const APP_VERSION = 'v45';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------
@@ -2599,6 +2621,7 @@ HTMLDialogElement.prototype.showModal = function () {
 window.addEventListener('popstate', () => {
   if (ignoreNextPop) { ignoreNextPop = false; return; }
   const open = [...document.querySelectorAll('dialog[open]')].pop();
+  if (!open && document.documentElement.classList.contains('plan-full')) { setPlanFull(false, true); return; }
   if (!open && onSubPage()) { ui.tab = 'exhibitors'; renderSidebar(); window.scrollTo(0, 0); return; }
   if (open) { closingFromHistory = true; cancelDialog(open); if (open.open) { closingFromHistory = false; history.pushState({ dialog: open.id }, ''); } }
 });
