@@ -1334,45 +1334,9 @@ $('#fiche-files').addEventListener('change', (e) => {
   showFiche();
 });
 
-// Bande de la photo affichée au-dessus de chaque champ (le NOM et le prénom partagent la leur).
-const CROP_FOR = { firstName: 'names', lastName: 'names' };
-function setFicheCrops(crops = {}) {
-  $$('[data-f]', ficheForm).forEach((el) => {
-    const url = crops[CROP_FOR[el.dataset.f] || el.dataset.f];
-    let img = $('.f-crop', el);
-    if (!url) { if (img) img.remove(); return; }
-    if (!img) {
-      img = document.createElement('img');
-      img.className = 'f-crop';
-      img.alt = 'Extrait de la fiche';
-      const anchor = el.tagName === 'FIELDSET' ? $('legend', el).nextSibling : el.firstChild.nextSibling;
-      el.insertBefore(img, anchor);
-    }
-    img.src = url;
-  });
-}
-
-// Pré-remplissage seulement si la lecture est fiable ; sinon la lecture devient une suggestion grisée.
-const READ_THRESHOLD = 85;
-function trustFicheFields(f) {
-  const conf = f.confidence || {};
-  const out = { ...f, suggest: {}, uncertain: new Set(f.uncertain || []) };
-  for (const k of ['products', 'firstName', 'lastName', 'email']) {
-    if (!out[k]) continue;
-    const ok = (conf[k] ?? 0) >= READ_THRESHOLD && (k !== 'email' || /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(out[k]));
-    if (!ok) { if ((conf[k] ?? 0) >= 50) out.suggest[k] = out[k]; out[k] = ''; }
-  }
-  if (out.phone && !/^0\d( ?\d\d){4}$/.test(out.phone)) { out.suggest.phone = out.phone; out.phone = ''; }
-  for (const k of ['products', 'firstName', 'lastName', 'phone', 'email']) if (!out[k]) out.uncertain.add(k);
-  return out;
-}
-
 function setFicheFields(f) {
   ficheForm.reset();
-  for (const k of ['products', 'firstName', 'lastName', 'phone', 'email', 'payment', 'notes']) {
-    ficheForm[k].value = f[k] || '';
-    ficheForm[k].placeholder = f.suggest?.[k] ? `Lu : « ${f.suggest[k]} » ?` : '';
-  }
+  for (const k of ['products', 'firstName', 'lastName', 'phone', 'email', 'payment', 'notes']) ficheForm[k].value = f[k] || '';
   ficheForm.tables.value = f.tables || 1;
   ficheForm.grilles.value = f.grilles || 0;
   ficheForm.category.value = f.category || guessCategory(f.products);
@@ -1400,7 +1364,6 @@ async function showFiche() {
   $('#fiche-img').hidden = true;
   $('#fiche-raw').hidden = true;
   setFicheFields({ uncertain: file ? new Set() : new Set(['electricity']) });
-  setFicheCrops();
   $('#fiche-warning').hidden = true;
   $('#fiche-add').textContent = ficheIndex < ficheQueue.length - 1 ? 'Ajouter et fiche suivante' : 'Ajouter et placer';
   $('#fiche-skip').hidden = ficheQueue.length < 2;
@@ -1421,8 +1384,7 @@ async function showFiche() {
     $('#fiche-img').src = res.preview;
     $('#fiche-text').textContent = res.text;
     $('#fiche-raw').hidden = false;
-    setFicheFields(trustFicheFields(res.fields));
-    setFicheCrops(res.crops);
+    setFicheFields(res.fields);
     if (!res.recognized) {
       const warn = $('#fiche-warning');
       warn.hidden = false;
@@ -1453,13 +1415,6 @@ function nextFiche() {
 
 $('#fiche-skip').onclick = nextFiche;
 $('#fiche-img').onclick = (e) => e.target.classList.toggle('zoomed');
-// Toucher un extrait l'agrandit (sans ouvrir le clavier du champ).
-ficheForm.addEventListener('click', (e) => {
-  const crop = e.target.closest('.f-crop');
-  if (!crop) return;
-  e.preventDefault();
-  crop.classList.toggle('zoomed');
-});
 $('#fiche-cancel').onclick = () => { ficheToken++; ficheDialog.close(); ficheQueue = []; };
 ficheForm.addEventListener('input', (e) => e.target.closest('[data-f]')?.classList.remove('to-check'));
 ficheForm.addEventListener('change', (e) => {
@@ -2209,7 +2164,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v23';
+const APP_VERSION = 'v24';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;

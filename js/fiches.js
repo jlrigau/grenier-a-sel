@@ -109,7 +109,6 @@ export async function readFiche(file, onProgress = () => {}) {
     if (score >= 5) break;
   }
   const fields = parseFicheText(best.data.text);
-  fields.confidence = fieldConfidence(fields, best.data);
   const elec = detectCircledChoice(best.canvas, best.data);
   if (elec !== null && fields.electricity === undefined) fields.electricity = elec;
   return {
@@ -117,76 +116,7 @@ export async function readFiche(file, onProgress = () => {}) {
     text: best.data.text,
     recognized: best.score >= 3,
     preview: best.canvas.toDataURL('image/jpeg', 0.85),
-    crops: lineCrops(best.canvas, best.data),
   };
-}
-
-const allLines = (data) => {
-  const out = [];
-  for (const block of data.blocks || []) for (const par of block.paragraphs || []) for (const line of par.lines || []) out.push(line);
-  return out;
-};
-
-// Confiance de lecture (0-100) de chaque champ texte : moyenne des mots reconnus qui le composent.
-// L'écriture manuscrite mal lue donne une confiance basse : on ne pré-remplit pas avec du charabia.
-function fieldConfidence(fields, data) {
-  const words = allLines(data).flatMap((l) => l.words || []);
-  const out = {};
-  for (const k of ['products', 'firstName', 'lastName', 'phone', 'email']) {
-    const v = String(fields[k] || '').toLowerCase();
-    if (!v) continue;
-    const parts = v.split(/\s+/).filter((p) => p.length > 1);
-    const confs = parts.map((p) => {
-      const w = words.find((w) => w.text.toLowerCase().includes(p) || p.includes(w.text.toLowerCase()) && w.text.length > 2);
-      return w ? w.confidence : 0;
-    });
-    out[k] = confs.length ? Math.round(confs.reduce((a, b) => a + b, 0) / confs.length) : 0;
-  }
-  return out;
-}
-
-// Bandes de la photo pour chaque rubrique : du libellé imprimé (bien lu) jusqu'au libellé suivant.
-// Elles s'affichent au-dessus des champs pour recopier l'écriture manuscrite sans zoomer.
-const CROP_LABELS = [
-  ['products', /objets|vendus/i],
-  ['tables', /nombre de tables|tables de/i],
-  ['grilles', /grilles/i],
-  ['electricity', /lectricit/i],
-  ['payment', /glement/i],
-  ['names', /\bNOM\b|pr[ée]nom/],
-  ['phone', /t[ée]l[ée]phone/i],
-  ['email', /mail/i],
-  ['end', /signature|approuv/i],
-];
-function lineCrops(canvas, data) {
-  const lines = allLines(data).filter((l) => l.bbox).sort((a, b) => a.bbox.y0 - b.bbox.y0);
-  const found = [];
-  for (const [key, re] of CROP_LABELS) {
-    const line = lines.find((l) => re.test(l.text));
-    if (line && !found.some((f) => f.line === line)) found.push({ key, line });
-  }
-  found.sort((a, b) => a.line.bbox.y0 - b.line.bbox.y0);
-  const labelH = (l) => Math.max(12, l.bbox.y1 - l.bbox.y0);
-  const left = Math.max(0, Math.min(...found.map((f) => f.line.bbox.x0)) - 20);
-  const formLines = lines.filter((l) => l.bbox.y0 >= found[0].line.bbox.y0 - 200);
-  const right = Math.min(canvas.width, Math.max(...formLines.map((l) => l.bbox.x1), ...found.map((f) => f.line.bbox.x1)) + 40);
-  const crops = {};
-  found.forEach((f, i) => {
-    if (f.key === 'end') return;
-    const h = labelH(f.line);
-    const y0 = Math.max(0, f.line.bbox.y0 - h * 1.2);
-    const next = found[i + 1];
-    // L'écriture déborde souvent sur la ligne suivante : on inclut le libellé suivant.
-    const y1 = Math.min(canvas.height, next ? Math.max(next.line.bbox.y1 + h * 0.3, f.line.bbox.y1 + h * 1.5) : f.line.bbox.y1 + h * 2.5);
-    const w = right - left, ch = y1 - y0;
-    if (ch < 8 || w < 40) return;
-    const scale = Math.min(1, 900 / w);
-    const c = document.createElement('canvas');
-    c.width = Math.round(w * scale); c.height = Math.round(ch * scale);
-    c.getContext('2d').drawImage(canvas, left, y0, w, ch, 0, 0, c.width, c.height);
-    crops[f.key] = c.toDataURL('image/jpeg', 0.8);
-  });
-  return crops;
 }
 
 // « Électricité : oui / non » : le choix entouré (ou souligné) a plus d'encre autour du mot.

@@ -1,6 +1,6 @@
 // Service worker : permet d'installer l'outil et de l'utiliser sans connexion.
 // Aucune donnée d'exposant ne passe ici : elles restent dans le navigateur (localStorage).
-const VERSION = 'v23';
+const VERSION = 'v24';
 const SHELL = `grenier-shell-${VERSION}`;
 const OCR = 'grenier-ocr-v1'; // moteur de lecture des fiches (gros fichiers qui ne changent pas)
 
