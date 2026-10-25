@@ -670,31 +670,31 @@ html { background: var(--bg); }
 body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 .topbar { padding-top: max(16px, env(safe-area-inset-top)); }
 /* Installée sur l'écran d'accueil : l'en-tête vert passe sous la barre d'état (heure, batterie). */
-:root.standalone .topbar {
+:root.green-head .topbar {
   background: var(--green); color: #fff; padding-bottom: 14px; margin-bottom: 4px;
   border-radius: 0 0 26px 26px; box-shadow: 0 6px 20px rgba(29, 51, 40, .18);
   padding-top: calc(10px + env(safe-area-inset-top));
 }
-:root.standalone .brand b { color: #fff; }
-:root.standalone .logo circle { fill: #24573f; }
-:root.standalone .logo { box-shadow: 0 0 0 2px rgba(255, 255, 255, .18); border-radius: 50%; }
-:root.standalone .topbar .round { background: rgba(255, 255, 255, .14); color: #fff; box-shadow: none; }
-:root.standalone .topbar .round:disabled { opacity: .35; }
-:root.standalone .topbar .pill.ghost { background: rgba(255, 255, 255, .14); color: #fff; box-shadow: none; }
-:root.standalone .topbar .pill.green { background: var(--mustard); color: #4a3200; box-shadow: none; }
-:root.standalone .list-badge { background: #fff; color: var(--green); box-shadow: 0 0 0 2px var(--green); }
-:root.standalone .nav-pills { box-shadow: none; }
+:root.green-head .brand b { color: #fff; }
+:root.green-head .logo circle { fill: #24573f; }
+:root.green-head .logo { box-shadow: 0 0 0 2px rgba(255, 255, 255, .18); border-radius: 50%; }
+:root.green-head .topbar .round { background: rgba(255, 255, 255, .14); color: #fff; box-shadow: none; }
+:root.green-head .topbar .round:disabled { opacity: .35; }
+:root.green-head .topbar .pill.ghost { background: rgba(255, 255, 255, .14); color: #fff; box-shadow: none; }
+:root.green-head .topbar .pill.green { background: var(--mustard); color: #4a3200; box-shadow: none; }
+:root.green-head .list-badge { background: #fff; color: var(--green); box-shadow: 0 0 0 2px var(--green); }
+:root.green-head .nav-pills { box-shadow: none; }
 /* La barre d'état reste verte quand on fait défiler. */
 /* Rebond d'iOS conservé (page qui défile normalement) : quand on tire la page vers le bas,
    le vert de l'en-tête se prolonge vers le haut au lieu de laisser voir le fond. */
-:root.standalone .topbar { position: relative; }
+:root.green-head .topbar { position: relative; }
 /* Rebond d'iOS en haut de page : la zone qui apparaît au-dessus de l'en-tête n'est pas peinte par
    la page, mais les éléments fixes le sont. Une couche verte fixe derrière la page (cachée par le
    fond crème de la page en temps normal) remplit donc ce vide. */
-:root.standalone::before {
+:root.green-head::before {
   content: ""; position: fixed; left: 0; right: 0; top: 0; height: 50vh; z-index: -1; background: var(--green); pointer-events: none;
 }
-:root.standalone .topbar::before {
+:root.green-head .topbar::before {
   content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 100vh; background: var(--green); pointer-events: none;
 }
 :root.standalone body::before {
@@ -727,25 +727,30 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 .diag { margin-top: 18px; color: var(--ink-2); font-size: 12px; }
 .diag summary { cursor: pointer; }
 .diag pre { white-space: pre-wrap; font-size: 11px; margin: 6px 0 0; }
-:root.standalone body { min-height: 100vh; }
+:root.green-head body { min-height: 100vh; }
 
 /* App installée sur téléphone : en-tête compact sur une ligne, toujours visible en haut. */
 @media (max-width: 900px) {
-  :root.standalone .topbar {
+  :root.green-head .topbar {
     position: sticky; top: 0; z-index: 60; flex-wrap: nowrap; gap: 10px; margin-bottom: 4px;
     padding: calc(env(safe-area-inset-top) + 6px) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left));
     border-radius: 0 0 20px 20px;
   }
-  :root.standalone .topbar .nav-pills, :root.standalone .topbar .sp { display: none; }
-  :root.standalone .brand { flex: 1; min-width: 0; gap: 8px; }
-  :root.standalone .logo { width: 32px; height: 32px; }
-  :root.standalone .brand b { font-size: 16px; overflow: hidden; text-overflow: ellipsis; }
-  :root.standalone .top-actions { gap: 6px; flex-shrink: 0; }
-  :root.standalone .top-actions .round, :root.standalone .top-actions .pill { width: 36px; height: 36px; min-width: 36px; padding: 0; justify-content: center; }
-  :root.standalone .top-actions .round svg, :root.standalone .top-actions .pill svg { width: 18px; height: 18px; }
-  :root.standalone .top-actions .list-badge { width: 16px; height: 16px; font-size: 11px; top: -3px; right: -3px; }
+  :root.green-head .topbar .nav-pills, :root.green-head .topbar .sp { display: none; }
+  :root.green-head .brand { flex: 1; min-width: 0; gap: 8px; }
+  :root.green-head .logo { width: 32px; height: 32px; }
+  :root.green-head .brand b { font-size: 16px; overflow: hidden; text-overflow: ellipsis; }
+  :root.green-head .top-actions { gap: 6px; flex-shrink: 0; }
+  :root.green-head .top-actions .round, :root.green-head .top-actions .pill { width: 36px; height: 36px; min-width: 36px; padding: 0; justify-content: center; }
+  :root.green-head .top-actions .round svg, :root.green-head .top-actions .pill svg { width: 18px; height: 18px; }
+  :root.green-head .top-actions .list-badge { width: 16px; height: 16px; font-size: 11px; top: -3px; right: -3px; }
 }
 /* Petits téléphones : le logo seul, plutôt qu'un nom coupé. */
 @media (max-width: 370px) {
-  :root.standalone .brand b { display: none; }
+  :root.green-head .brand b { display: none; }
+}
+
+/* En-tête compact : le bouton « Installer » passe dans le menu Données. */
+@media (max-width: 900px) {
+  :root.green-head #btn-install { display: none; }
 }

@@ -1732,6 +1732,7 @@ dataMenu.addEventListener('click', (e) => {
   if (act === 'import') $('#import-file').click();
   if (act === 'export-png') exportPNG();
   if (act === 'list') openList();
+  if (act === 'install') $('#btn-install').click();
 });
 
 $('#import-file').addEventListener('change', async (e) => {
@@ -2083,6 +2084,14 @@ fitView();
 const standalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 // Mode application installée : l'en-tête passe sous la barre d'état du téléphone.
 document.documentElement.classList.toggle('standalone', standalone());
+// En-tête vert compact : app installée, ou téléphone dans le navigateur (suivi si la largeur change).
+const phoneWidth = window.matchMedia('(max-width: 900px)');
+const syncGreenHead = () => document.documentElement.classList.toggle('green-head', standalone() || phoneWidth.matches);
+phoneWidth.addEventListener('change', syncGreenHead);
+syncGreenHead();
+// Bouton « Installer » : dans le menu Données (l'en-tête compact n'a pas la place).
+new MutationObserver(() => { $('#menu-install').hidden = $('#btn-install').hidden; })
+  .observe($('#btn-install'), { attributes: true, attributeFilter: ['hidden'] });
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let installPrompt = null;
 
@@ -2164,7 +2173,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v29';
+const APP_VERSION = 'v30';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;

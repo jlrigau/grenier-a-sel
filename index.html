@@ -18,6 +18,8 @@
   <script>
     // Application installée : appliqué avant l'affichage pour éviter un flash.
     if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) document.documentElement.classList.add('standalone');
+    // En-tête vert compact : app installée, ou téléphone dans le navigateur.
+    if (document.documentElement.classList.contains('standalone') || window.matchMedia('(max-width: 900px)').matches) document.documentElement.classList.add('green-head');
   </script>
 </head>
 <body>
@@ -91,6 +93,7 @@
           <button data-action="import"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Importer un fichier .json…</button>
           <button data-action="list"><svg class="i" aria-hidden="true"><use href="#i-table"/></svg>Liste des exposants (Excel / CSV)…</button>
           <button data-action="export-png"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Image du plan (.png)</button>
+          <button data-action="install" id="menu-install" hidden><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg>Installer l'application…</button>
         </div>
       </div>
       <button id="btn-print" class="pill ghost"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg><span class="lbl">Imprimer</span></button>
