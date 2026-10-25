@@ -93,7 +93,6 @@
           <button data-action="import"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Importer un fichier .json…</button>
           <button data-action="list"><svg class="i" aria-hidden="true"><use href="#i-table"/></svg>Liste des exposants (Excel / CSV)…</button>
           <button data-action="export-png"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Image du plan (.png)</button>
-          <button data-action="install" id="menu-install" hidden><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg>Installer l'application…</button>
         </div>
       </div>
       <button id="btn-print" class="pill ghost"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg><span class="lbl">Imprimer</span></button>
@@ -196,6 +195,15 @@
       <section class="tab-panel" id="tab-list" hidden></section>
     </aside>
   </main>
+  <footer class="app-foot" id="app-foot"></footer>
+
+  <!-- Navigateur sur téléphone : invitation à installer l'application (masquée une fois installée). -->
+  <aside class="install-banner" id="install-banner" hidden>
+    <img src="icons/logo.svg" class="ib-logo" alt="">
+    <div class="ib-text"><b>Installez Grenier à sel</b><span>Sur l'écran d'accueil, comme une vraie application, même sans connexion.</span></div>
+    <button class="btn primary" id="ib-install">Installer</button>
+    <button class="ib-close" id="ib-close" title="Plus tard" aria-label="Plus tard"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+  </aside>
 
   <nav class="tabbar" id="tabbar" aria-label="Navigation">
     <button data-nav="plan" class="on"><svg class="i" aria-hidden="true"><use href="#i-layout"/></svg><span>Plan</span></button>

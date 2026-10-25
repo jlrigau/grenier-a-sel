@@ -565,8 +565,6 @@ function renderSettings() {
     <div class="btn-row">
       <button class="btn small danger" data-act="delete-event">Supprimer cet événement</button>
     </div>
-
-    <details class="diag"><summary>Infos techniques</summary><pre id="diag"></pre></details>
   `;
 }
 
@@ -1784,7 +1782,6 @@ dataMenu.addEventListener('click', (e) => {
   if (act === 'import') $('#import-file').click();
   if (act === 'export-png') exportPNG();
   if (act === 'list') openList();
-  if (act === 'install') $('#btn-install').click();
 });
 
 $('#import-file').addEventListener('change', async (e) => {
@@ -2144,9 +2141,7 @@ phoneWidth.addEventListener('change', () => {
   if (!isPhone() && ui.tab === 'list') { ui.tab = 'exhibitors'; renderSidebar(); }
 });
 syncGreenHead();
-// Bouton « Installer » : dans le menu Données (l'en-tête compact n'a pas la place).
-new MutationObserver(() => { $('#menu-install').hidden = $('#btn-install').hidden; })
-  .observe($('#btn-install'), { attributes: true, attributeFilter: ['hidden'] });
+
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let installPrompt = null;
 
@@ -2174,17 +2169,37 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 // Demande au navigateur de ne pas effacer les données locales (plans, exposants).
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
+// Navigateur sur téléphone : un bandeau en bas invite à installer l'application. « Plus tard » le
+// masque une semaine (mémorisé dans ce navigateur seulement).
+const BANNER_KEY = 'grenier-a-sel/install-later';
+const isAndroid = /android/i.test(navigator.userAgent);
+function renderInstallBanner() {
+  let later = 0;
+  try { later = Number(localStorage.getItem(BANNER_KEY) || 0); } catch { /* ignore */ }
+  const show = !standalone() && touchScreen() && (installPrompt || isIOS || isAndroid) && Date.now() - later > 7 * 864e5;
+  $('#install-banner').hidden = !show;
+  document.documentElement.classList.toggle('has-install-banner', show);
+}
+$('#ib-install').onclick = () => $('#btn-install').click();
+$('#ib-close').onclick = () => {
+  try { localStorage.setItem(BANNER_KEY, String(Date.now())); } catch { /* ignore */ }
+  renderInstallBanner();
+};
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   installPrompt = e;
   $('#btn-install').hidden = false;
+  renderInstallBanner();
 });
 window.addEventListener('appinstalled', () => {
   $('#btn-install').hidden = true;
   installPrompt = null;
+  renderInstallBanner();
   toast("Application installée sur l'écran d'accueil", 'success');
 });
 if (!standalone() && isIOS) $('#btn-install').hidden = false;
+renderInstallBanner();
 
 $('#btn-install').onclick = async () => {
   if (installPrompt) {
@@ -2227,26 +2242,9 @@ $('#install-close').onclick = () => $('#install-dialog').close();
   update();
 })();
 
-// Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v37';
-const diag = { gap: null };
-function screenInfo() {
-  const vv = window.visualViewport;
-  const top = Math.round($('.topbar').getBoundingClientRect().top);
-  return { scrollY: Math.round(window.scrollY), top, innerH: window.innerHeight, vvH: vv ? Math.round(vv.height) : '-', vvTop: vv ? Math.round(vv.offsetTop) : '-', screenH: screen.height };
-}
-function noteGap() {
-  const info = screenInfo();
-  if (info.top > 2 && info.scrollY <= 0) diag.gap = { ...info, at: new Date().toLocaleTimeString('fr-FR') };
-}
-['scroll', 'resize', 'focusout', 'touchend'].forEach((t) => window.addEventListener(t, () => setTimeout(noteGap, 300), { passive: true }));
-if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(noteGap, 300));
-setInterval(() => {
-  const box = document.getElementById('diag');
-  if (!box || !box.closest('details').open) return;
-  const fmt = (o) => Object.entries(o).map(([k, v]) => `${k} ${v}`).join(' · ');
-  box.textContent = `Version ${APP_VERSION} · ${standalone() ? 'app installée' : 'navigateur'}\nMaintenant : ${fmt(screenInfo())}\nDernier décalage vu : ${diag.gap ? fmt(diag.gap) : 'aucun'}`;
-}, 500);
+// Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
+const APP_VERSION = 'v38';
+$('#app-foot').textContent = `Grenier à sel · version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------
 // Chaque fenêtre se ferme par sa croix, en touchant à côté, avec Échap ou avec le « retour »
