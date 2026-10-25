@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Propositions de design · Grenier à Sel</title>
+<style>
+body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f5; color: #18181b; }
+main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+h1 { margin: 0 0 6px; } p.lead { margin: 0 0 28px; color: #52525b; }
+.g { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+a.card { display: block; background: #fff; border-radius: 12px; overflow: hidden; color: inherit; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+a.card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+a.card iframe { width: 1440px; height: 900px; border: 0; transform: scale(.25); transform-origin: 0 0; pointer-events: none; }
+.frame { width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: #e4e4e7; }
+.t { padding: 12px 14px; } .t b { font-size: 17px; } .t span { display: block; color: #71717a; font-size: 14px; margin-top: 2px; }
+.logos { display: block; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Propositions de design</h1>
+  <p class="lead">Maquettes non fonctionnelles, avec des données fictives, pour choisir une direction. Chaque proposition a sa propre organisation d'écran, ses composants, sa typographie et son logo.</p>
+  <div class="g">
+    <a class="card" href="atelier.html"><div class="frame"><iframe src="atelier.html" loading="lazy" title="Atelier"></iframe></div><div class="t"><b>A · Atelier</b><span>Outil de travail : barre de navigation, liste, plan au centre, panneau de détails.</span></div></a>
+    <a class="card" href="marche.html"><div class="frame"><iframe src="marche.html" loading="lazy" title="Marché"></iframe></div><div class="t"><b>B · Marché</b><span>Convivial : grandes cartes arrondies, chiffres clés, avatars d'exposants.</span></div></a>
+    <a class="card" href="planche.html"><div class="frame"><iframe src="planche.html" loading="lazy" title="Planche"></iframe></div><div class="t"><b>C · Planche</b><span>Éditorial : planche d'architecte, cartouche, index des exposants.</span></div></a>
+    <a class="card" href="console.html"><div class="frame"><iframe src="console.html" loading="lazy" title="Console"></iframe></div><div class="t"><b>D · Console</b><span>Tableau de bord sombre en blocs, barre de commande, activité.</span></div></a>
+  </div>
+  <a class="card logos" href="logos.html"><div class="t"><b>Les 4 logos</b><span>En grand, avec le nom, et aux tailles d'icône.</span></div></a>
+</main>
+</body>
+</html>

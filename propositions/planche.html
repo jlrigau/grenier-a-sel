@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposition C · Planche</title>
+<style>
+@font-face { font-family: "Fraunces"; src: url("../vendor/fonts/fraunces-latin-wght-normal.woff2") format("woff2-variations"); font-weight: 100 900; }
+@font-face { font-family: "DM Sans"; src: url("../vendor/fonts/dm-sans-latin-wght-normal.woff2") format("woff2-variations"); font-weight: 100 1000; }
+:root {
+  --paper: #f1ece2; --sheet: #fbf8f2; --ink: #16140f; --ink-2: #4a463d; --ink-3: #8c8576; --rule: #16140f; --hair: #d8d0bf;
+  --red: #c0392b; --blue: #1f4e79;
+  --serif: "Fraunces", Georgia, serif; --sans: "DM Sans", system-ui, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--sans); color: var(--ink); font-size: 13.5px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; height: 100vh; background: var(--paper); display: flex; flex-direction: column; overflow: hidden; }
+header { display: flex; align-items: center; gap: 22px; padding: 12px 28px; border-bottom: 1.5px solid var(--rule); background: var(--sheet); }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand b { font-family: var(--serif); font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+.brand small { display: block; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); margin-top: -2px; }
+nav { display: flex; gap: 22px; margin-left: 26px; font-weight: 500; color: var(--ink-2); }
+nav a.on { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 7px; }
+header .sp { flex: 1; }
+.btn { font: inherit; font-weight: 600; height: 34px; padding: 0 14px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); border-radius: 0; display: inline-flex; align-items: center; gap: 8px; }
+.btn.fill { background: var(--ink); color: var(--sheet); }
+
+.work { flex: 1; display: grid; grid-template-columns: 1fr 360px; gap: 0; min-height: 0; }
+.board { padding: 22px 26px; display: flex; flex-direction: column; min-height: 0; }
+.board .bar { display: flex; align-items: baseline; gap: 16px; margin-bottom: 12px; }
+.board h1 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 30px; letter-spacing: -.01em; }
+.board h1 i { color: var(--ink-3); font-weight: 400; }
+.modes { margin-left: auto; display: flex; border: 1.5px solid var(--ink); }
+.modes span { padding: 6px 14px; font-weight: 600; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; border-right: 1.5px solid var(--ink); }
+.modes span:last-child { border-right: 0; } .modes span.on { background: var(--ink); color: var(--sheet); }
+.sheet { flex: 1; min-height: 0; background: var(--sheet); border: 1.5px solid var(--ink); position: relative; padding: 18px 22px; background-image: linear-gradient(var(--hair) .5px, transparent .5px), linear-gradient(90deg, var(--hair) .5px, transparent .5px); background-size: 22px 22px; background-position: -1px -1px; }
+.sheet .corner { position: absolute; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.north { position: absolute; right: 22px; top: 16px; text-align: center; font-family: var(--serif); font-size: 13px; }
+.scale { position: absolute; left: 24px; bottom: 14px; display: flex; align-items: end; gap: 0; font-family: var(--mono); font-size: 10px; }
+.scale i { display: block; width: 32px; height: 6px; border: 1px solid var(--ink); } .scale i:nth-child(odd) { background: var(--ink); }
+
+aside { border-left: 1.5px solid var(--rule); background: var(--sheet); display: flex; flex-direction: column; min-height: 0; }
+.cartouche { border-bottom: 1.5px solid var(--rule); }
+.cartouche .r { display: grid; grid-template-columns: 110px 1fr; border-bottom: 1px solid var(--hair); }
+.cartouche .r:last-child { border-bottom: 0; }
+.cartouche .k { padding: 8px 12px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); border-right: 1px solid var(--hair); }
+.cartouche .v { padding: 7px 12px; font-weight: 600; }
+.cartouche .title { padding: 14px 14px 12px; border-bottom: 1px solid var(--hair); }
+.cartouche .title b { font-family: var(--serif); font-size: 22px; font-weight: 600; display: block; }
+.cartouche .title span { color: var(--ink-3); }
+.note { margin: 12px 14px 0; border-left: 3px solid var(--red); padding: 6px 10px; background: #f7e9e3; font-size: 13px; }
+.note b { color: var(--red); font-family: var(--mono); margin-right: 6px; }
+.index { padding: 12px 14px; overflow: auto; flex: 1; }
+.index h3 { margin: 0 0 8px; font-family: var(--serif); font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: baseline; }
+.index h3 small { font-family: var(--sans); font-weight: 500; color: var(--ink-3); font-size: 12px; }
+.it { display: grid; grid-template-columns: 46px 12px 1fr auto; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dotted var(--hair); }
+.it .no { font-family: var(--mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.it .sq { width: 10px; height: 10px; border: 1px solid var(--ink); align-self: center; }
+.it .nm { font-family: var(--serif); font-size: 14.5px; }
+.it .nm small { font-family: var(--sans); color: var(--ink-3); font-size: 12px; margin-left: 4px; }
+.it .fl { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.it.todo .no { color: var(--red); }
+aside footer { border-top: 1.5px solid var(--rule); padding: 12px 14px; display: flex; gap: 8px; }
+aside footer .btn { flex: 1; justify-content: center; white-space: nowrap; font-size: 12.5px; padding: 0 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <!-- Logo Planche : sceau (sel / sceau), façade du grenier au trait -->
+    <svg width="54" height="54" viewBox="0 0 100 100">
+      <defs><path id="ring" d="M50 50 m-36 0 a36 36 0 1 1 72 0 a36 36 0 1 1 -72 0"/></defs>
+      <circle cx="50" cy="50" r="47" fill="none" stroke="#16140f" stroke-width="2.5"/>
+      <circle cx="50" cy="50" r="28" fill="none" stroke="#16140f" stroke-width="1.5"/>
+      <text font-family="DM Sans, sans-serif" font-size="10.5" font-weight="700" letter-spacing="2.6" fill="#16140f"><textPath href="#ring">GRENIER À SEL · GAINNEVILLE ·</textPath></text>
+      <path d="M34 60 V47 L50 35 L66 47 V60 Z" fill="none" stroke="#16140f" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M31 49 L50 33 L69 49" fill="none" stroke="#16140f" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M46 60 V53 h8 v7 M39 51 h4 v3 h-4z M57 51 h4 v3 h-4z" fill="none" stroke="#16140f" stroke-width="1.5"/>
+      <path d="M50 40.5 l3 1.6 -3 1.6 -3 -1.6z" fill="#c0392b"/>
+      <path d="M30 60 H70" stroke="#16140f" stroke-width="2"/>
+    </svg>
+    <div><b>Grenier à Sel</b><small>Planches d'exposition</small></div>
+  </div>
+  <nav><a class="on">Planche</a><a>Index</a><a>Fiches</a><a>Archives</a></nav>
+  <span class="sp"></span>
+  <button class="btn">Exporter l'index</button>
+  <button class="btn fill">Imprimer la planche</button>
+</header>
+<div class="work">
+  <section class="board">
+    <div class="bar"><h1>Marché de Noël <i>— planche n° 3</i></h1>
+      <div class="modes"><span class="on">Placement</span><span>Tables</span><span>Électricité</span></div></div>
+    <div class="sheet">
+      <span class="corner" style="left:8px;top:6px">A</span><span class="corner" style="right:8px;bottom:6px">GAS-2026-03</span>
+      <div class="north"><svg width="22" height="30" viewBox="0 0 22 30"><path d="M11 2 L19 26 L11 20 L3 26 Z" fill="#16140f"/></svg><br>N</div>
+      <div id="plan" style="height:100%;padding:10px 36px 30px"></div>
+      <div class="scale"><i></i><i></i><i></i><i></i><i></i><span style="margin-left:6px">0 — 5 m</span></div>
+    </div>
+  </section>
+  <aside>
+    <div class="cartouche">
+      <div class="title"><b>Marché de Noël</b><span>Salle du Grenier à Sel, Gainneville</span></div>
+      <div class="r"><div class="k">Date</div><div class="v">29 novembre 2026</div></div>
+      <div class="r"><div class="k">Exposants</div><div class="v" id="c-ex"></div></div>
+      <div class="r"><div class="k">Tables</div><div class="v" id="c-t"></div></div>
+      <div class="r"><div class="k">Révision</div><div class="v">C · 25 oct. 2026</div></div>
+    </div>
+    <div class="note"><b>①</b>Bijoux Lune et Atelier Perles sont voisins — à séparer.</div>
+    <div class="index"><h3>Index des exposants <small>par n° de table</small></h3><div id="index"></div></div>
+    <footer><button class="btn">Ajouter une fiche</button><button class="btn fill">Photographier des fiches</button></footer>
+  </aside>
+</div>
+<script type="module">
+import { demoEvent, planSVG, esc } from './shared.js';
+const { ev } = demoEvent();
+const pal = { Alimentation: '#e8d9b0', Restauration: '#e9c4a6', Bijoux: '#d4cde0', Céramique: '#e3b9ae', Décoration: '#e6cdd2', Vêtements: '#bfd0dc', Livres: '#c9d8c0', Association: '#d6dcb2', Cosmétique: '#bfd8d2', Jouets: '#ecdcb0', Art: '#c7cbe0', Brocante: '#d9d2c5' };
+document.getElementById('plan').innerHTML = planSVG(ev, { id: 'c', palette: pal, room: '#fbf8f2', building: 'transparent', service: '#f1ece2', hatch: '#b9b09c', stage: '#f5f0e6', wall: '#16140f', wallWidth: 0.3, line: '#16140f', label: '#4a463d', labelFont: 'Fraunces', bigItalic: true, bigOpacity: 0.55, table: '#fbf8f2', tableLine: '#16140f', tableLineOcc: '#16140f', tableStroke: 0.035, tableText: '#16140f', numText: '#4a463d', numFont: 'ui-monospace, Menlo, monospace', font: 'DM Sans', nameWeight: 500, radius: 0, conflicts: ev.conflictTables, danger: '#c0392b', power: '#16140f', exit: '#1f4e79', clear: '#d7a49b' });
+const placed = ev.exhibitors.filter((e) => e.nums.length);
+document.getElementById('c-ex').textContent = `${placed.length} placés sur ${ev.exhibitors.length}`;
+document.getElementById('c-t').textContent = `${Object.keys(ev.assignments).length} / 48 × 1,80 m`;
+const rows = [...ev.exhibitors].sort((a, b) => (a.nums[0] ?? 999) - (b.nums[0] ?? 999));
+document.getElementById('index').innerHTML = rows.map((e) => `<div class="it ${e.nums.length ? '' : 'todo'}"><span class="no">${e.nums.length ? e.nums.map((n) => String(n).padStart(2, '0')).join('-') : '—'}</span><span class="sq" style="background:${pal[e.category]}"></span><span class="nm">${esc(e.name)}<small>${esc(e.category)}</small></span><span class="fl">${e.electricity ? 'ÉLEC' : ''}</span></div>`).join('');
+</script>
+</body>
+</html>
