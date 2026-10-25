@@ -387,7 +387,7 @@ function renderStats() {
   const todo = evaluation.issues.filter((i) => i.severity === 'error' || i.severity === 'warning').length;
   const card = (cls, icon, value, label, act) => `<button class="stat ${cls}" ${act ? `data-stat="${act}"` : ''}><span class="stat-ic">${ic(icon)}</span><span><b>${value}</b><span>${label}</span></span></button>`;
   $('#stats-row').innerHTML = [
-    card('green', 'users', `${placed}/${active.length}`, `exposants placés${waiting ? ` · ${waiting} en attente` : ''}`, 'unplaced'),
+    card('green', 'users', `${placed}/${active.length}`, `exposants placés${waiting ? `<span class="stat-wait" data-waitlist>+ ${waiting} en liste d'attente</span>` : ''}`, 'unplaced'),
     card('sky', 'table2', `${used}/${usable}`, 'tables occupées', ''),
     card('mustard', 'zap', elec, `besoin${elec > 1 ? 's' : ''} d'électricité`, 'power'),
     card(todo ? 'coral' : 'ok', todo ? 'alert' : 'check', todo, todo > 1 ? 'points à régler' : todo ? 'point à régler' : 'tout est en ordre', 'checks'),
@@ -1130,6 +1130,7 @@ $('#tabbar').addEventListener('click', onNav);
 $('#stats-row').addEventListener('click', (e) => {
   const act = e.target.closest('[data-stat]')?.dataset.stat;
   if (act === 'checks') showTab('checks');
+  if (e.target.closest('[data-waitlist]')) { ui.filter = 'waitlist'; ui.tab = 'exhibitors'; renderSidebar(); $('#ex-filters').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   if (act === 'unplaced') { ui.filter = 'unplaced'; showTab('exhibitors'); }
   if (act === 'power') { ui.mode = 'power'; refresh(); }
 });
@@ -2410,7 +2411,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v52';
+const APP_VERSION = 'v53';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------

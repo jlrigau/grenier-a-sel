@@ -970,3 +970,4 @@ details.advanced > summary { cursor: pointer; font-weight: 700; color: var(--ink
 @media (max-width: 900px) {
   :root.green-head, :root.green-head body { background-color: var(--bg); background-image: none; }
 }
+.stat-wait { display: block; font-weight: 700; color: var(--mustard-ink); text-decoration: underline; text-underline-offset: 2px; }
