@@ -2121,16 +2121,16 @@ $('#install-close').onclick = () => $('#install-dialog').close();
     const typing = touchScreen() && isField(document.activeElement);
     const shrunk = vv ? window.innerHeight - vv.height > 120 : false;
     const was = root.classList.contains('kbd-open');
-    const open = typing || (touchScreen() && shrunk);
+    const open = typing && shrunk;
     root.classList.toggle('kbd-open', open);
     // iOS laisse parfois la page décalée vers le bas après la fermeture du clavier : on la recale.
-    if (was && !open) setTimeout(() => window.scrollTo(window.scrollX, window.scrollY), 80);
+    if (was && !open && !isField(document.activeElement)) setTimeout(() => window.scrollTo(window.scrollX, window.scrollY), 80);
     if (vv) {
       root.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
       root.style.setProperty('--vvtop', `${Math.round(vv.offsetTop)}px`);
     }
   };
-  document.addEventListener('focusin', update);
+  document.addEventListener('focusin', () => setTimeout(update, 300));
   document.addEventListener('focusout', () => setTimeout(update, 60));
   if (vv) { vv.addEventListener('resize', update); vv.addEventListener('scroll', update); }
   update();
@@ -2171,12 +2171,20 @@ function cancelDialog(dlg) {
   const btn = DIALOG_CANCEL[dlg.id] && $(DIALOG_CANCEL[dlg.id], dlg);
   if (btn) btn.click(); else dlg.close();
 }
+const outsideDialog = (dlg, e) => {
+  const r = dlg.getBoundingClientRect();
+  return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+};
+let downOnBackdrop = null;
+document.addEventListener('pointerdown', (e) => {
+  downOnBackdrop = e.target.tagName === 'DIALOG' && outsideDialog(e.target, e) ? e.target : null;
+}, true);
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-close]')) { cancelDialog(e.target.closest('dialog')); return; }
-  // Toucher le fond grisé autour de la fenêtre
-  if (e.target.tagName === 'DIALOG') {
-    const r = e.target.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) cancelDialog(e.target);
+  // Toucher le fond grisé autour de la fenêtre (posé et levé sur le fond, pas un toucher
+  // qui a commencé dans un champ alors que la fenêtre se déplaçait)
+  if (e.target.tagName === 'DIALOG' && downOnBackdrop === e.target) {
+    if (outsideDialog(e.target, e)) cancelDialog(e.target);
   }
 });
 document.addEventListener('cancel', (e) => { if (e.target.tagName === 'DIALOG') { e.preventDefault(); cancelDialog(e.target); } }, true);
