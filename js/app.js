@@ -2048,8 +2048,26 @@ document.documentElement.classList.toggle('standalone', standalone());
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let installPrompt = null;
 
+// Une nouvelle publication installe un nouveau service worker qui prend la main tout de suite :
+// la page se recharge alors une fois pour être entièrement à jour (comme Encrine). Jamais au premier
+// enregistrement, jamais deux fois en moins de 30 s. Au retour dans l'application, on vérifie s'il y a du nouveau.
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker', e));
+  const sw = navigator.serviceWorker;
+  let hadController = !!sw.controller;
+  let reloading = false;
+  sw.addEventListener('controllerchange', () => {
+    if (!hadController) { hadController = true; return; }
+    if (reloading) return;
+    let last = 0;
+    try { last = Number(sessionStorage.getItem('grenier-a-sel/reload') || 0); } catch { /* ignore */ }
+    if (Date.now() - last < 30000) return;
+    reloading = true;
+    try { sessionStorage.setItem('grenier-a-sel/reload', String(Date.now())); } catch { /* ignore */ }
+    location.reload();
+  });
+  sw.register('sw.js').then((reg) => {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch((e) => console.warn('Service worker', e));
 }
 // Demande au navigateur de ne pas effacer les données locales (plans, exposants).
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

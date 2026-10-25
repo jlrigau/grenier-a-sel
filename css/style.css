@@ -633,8 +633,6 @@ html { background: var(--bg); }
 body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 .topbar { padding-top: max(16px, env(safe-area-inset-top)); }
 /* Installée sur l'écran d'accueil : l'en-tête vert passe sous la barre d'état (heure, batterie). */
-:root.standalone { background: var(--green); }
-:root.standalone body { background-color: var(--bg); }
 :root.standalone .topbar {
   background: var(--green); color: #fff; padding-bottom: 14px; margin-bottom: 4px;
   border-radius: 0 0 26px 26px; box-shadow: 0 6px 20px rgba(29, 51, 40, .18);
