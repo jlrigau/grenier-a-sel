@@ -55,7 +55,9 @@
 html, body { margin: 0; min-height: 100%; }
 body {
   background: var(--bg); display: flex; flex-direction: column; font-size: 15px; line-height: 1.45;
-  background-image: radial-gradient(circle at 92% -8%, #f6e7c4 0, transparent 38%);
+  /* Halo de taille fixe : identique sur toutes les pages, courtes ou longues. */
+  background-image: radial-gradient(circle 520px at calc(100% - 30px) -60px, #f6e7c4 0, transparent 100%);
+  background-repeat: no-repeat;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--green); }
@@ -777,3 +779,10 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 #tab-list .close-x { display: none; }
 #tab-list .list-head h2 { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
 #tab-list .list-scroll { overflow: visible; }
+
+/* Champ date : Safari (iPhone) lui donne une largeur minimale propre qui le fait déborder. */
+input[type=date] {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
+  min-height: calc(1.45em + 21px - 2px); text-align: left; background-color: #fff;
+}
+input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
