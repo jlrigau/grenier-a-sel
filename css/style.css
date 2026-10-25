@@ -846,3 +846,17 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
   :root.green-head #btn-print { display: none; }
   :root.green-head .menu-print { display: flex; }
 }
+
+/* Suivi des inscriptions */
+.follow { border: 1px solid var(--border); border-radius: 16px; padding: 10px 14px 12px; display: grid; gap: 8px; }
+.follow legend { font-weight: 700; padding: 0 6px; }
+.follow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.follow-grid label { display: grid; gap: 4px; }
+.tag-pay { color: var(--coral); font-weight: 700; }
+.tag-paid { color: var(--green); font-weight: 700; }
+.ex-item.waitlisted { opacity: .75; }
+.ex-item.waitlisted .where { background: var(--surface-3); color: var(--ink-3); }
+#notify-dialog textarea { width: 100%; box-sizing: border-box; font-size: 15px; line-height: 1.45; margin: 8px 0 4px; }
+.notify-actions { flex-wrap: wrap; }
+/* Filtres de la liste : passent à la ligne au besoin */
+#ex-filters { flex-wrap: wrap; }

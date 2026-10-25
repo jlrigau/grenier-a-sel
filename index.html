@@ -181,6 +181,8 @@
             <button data-filter="all" class="active">Tous</button>
             <button data-filter="unplaced">À placer</button>
             <button data-filter="issues">Problèmes</button>
+            <button data-filter="unpaid">Non payés</button>
+            <button data-filter="waitlist">Liste d'attente</button>
           </div>
           <p class="demo-banner" id="demo-banner" hidden><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>Événement de démonstration : toutes les données sont <b>fictives</b>. Vous pouvez le supprimer dans « Réglages ».</span></p>
           <div class="stats" id="ex-stats"></div>
@@ -259,6 +261,19 @@
         <label>Règlement (€)
           <input name="payment" maxlength="10" inputmode="decimal">
         </label>
+        <fieldset class="span2 follow">
+          <legend>Suivi de l'inscription</legend>
+          <div class="follow-grid">
+            <label>Paiement
+              <select name="paymentStatus"><option value="">Non renseigné</option><option value="pending">À payer</option><option value="paid">Payé</option></select>
+            </label>
+            <label>Mode
+              <select name="paymentMethod"><option value="">—</option><option value="cheque">Chèque</option><option value="especes">Espèces</option><option value="virement">Virement</option><option value="autre">Autre</option></select>
+            </label>
+          </div>
+          <label class="check"><input type="checkbox" name="confirmed"> Confirmation envoyée (table communiquée)</label>
+          <label class="check"><input type="checkbox" name="waitlist"> Liste d'attente : pas de table pour l'instant</label>
+        </fieldset>
         <label>Téléphone
           <input name="phone" maxlength="30" inputmode="tel">
         </label>
@@ -271,6 +286,7 @@
       </div>
       <div class="dialog-actions">
         <button type="button" class="btn danger" id="ex-delete">Supprimer</button>
+        <button type="button" class="btn" id="ex-notify">Prévenir</button>
         <span class="spacer"></span>
         <button type="button" class="btn" id="ex-cancel">Annuler</button>
         <button type="submit" class="btn" value="save" id="ex-save">Enregistrer</button>
@@ -349,6 +365,7 @@
       <div class="list-actions">
         <button class="btn primary" data-list="xlsx"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg> Excel</button>
         <button class="btn" data-list="csv"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg> CSV</button>
+        <button class="btn" data-list="emails"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg> E-mails</button>
         <button class="btn" data-list="print"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg> Imprimer</button>
         <button class="btn" data-list="link" id="list-link" hidden title="Choisir un fichier Excel sur l'ordinateur qui sera mis à jour à chaque modification"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg> Fichier synchronisé…</button>
         <button class="icon-btn close-x" data-list="close" title="Fermer"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
@@ -357,6 +374,20 @@
     <p class="list-status" id="list-status"></p>
     <div class="list-scroll"><table class="list-table" id="list-table"></table></div>
     <p class="muted small">Cliquez une ligne pour modifier l'exposant · cliquez un titre de colonne pour trier.</p>
+    </div>
+  </dialog>
+
+  <dialog id="notify-dialog">
+    <button type="button" class="sheet-close" data-notify="close" title="Fermer" aria-label="Fermer"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <h2 id="notify-title">Prévenir l'exposant</h2>
+    <p class="muted small">Message prérempli, modifiable avant l'envoi. L'envoi se fait depuis votre téléphone ou votre messagerie : rien ne passe par l'outil.</p>
+    <textarea id="notify-text" rows="8"></textarea>
+    <p class="muted small" id="notify-hint"></p>
+    <div class="dialog-actions notify-actions">
+      <button class="btn primary" data-notify="sms" id="notify-sms">SMS</button>
+      <button class="btn primary" data-notify="mail" id="notify-mail">E-mail</button>
+      <button class="btn" data-notify="share" id="notify-share">Partager…</button>
+      <button class="btn" data-notify="copy">Copier</button>
     </div>
   </dialog>
 

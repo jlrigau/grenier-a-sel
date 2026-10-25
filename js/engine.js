@@ -144,9 +144,19 @@ function relationPairs(exhibitors, key) {
   return pairs;
 }
 
+// Les exposants en liste d'attente ne sont ni placés ni contrôlés : le moteur ne voit que les autres.
+export function activeEvent(ev) {
+  if (!ev.exhibitors.some((e) => e.waitlist)) return ev;
+  const exhibitors = ev.exhibitors.filter((e) => !e.waitlist);
+  const ids = new Set(exhibitors.map((e) => e.id));
+  const assignments = Object.fromEntries(Object.entries(ev.assignments || {}).filter(([, eid]) => ids.has(eid)));
+  return { ...ev, exhibitors, assignments };
+}
+
 // ---------- Vérification ----------
 
 export function evaluate(ev) {
+  ev = activeEvent(ev);
   const ctx = buildContext(ev);
   const { s } = ctx;
   const issues = [...ctx.geo];
@@ -380,6 +390,7 @@ function allowedMask(ctx, P, fixed) {
 
 // Place un seul exposant sur le meilleur groupe de tables libres, sans toucher aux autres.
 export function placeOne(ev, exId) {
+  ev = activeEvent(ev);
   const ctx = buildContext(ev);
   const P = prepare(ev, ctx);
   const e = P.exIndex.get(exId);
@@ -406,6 +417,7 @@ export function placeOne(ev, exId) {
 // mode « keep » : garde au maximum les emplacements actuels ; « fresh » : repart de zéro.
 // Les exposants verrouillés ne bougent jamais.
 export function optimize(ev, { mode = 'keep', iterations = 40000, seed = Date.now() } = {}) {
+  ev = activeEvent(ev);
   const rand = mulberry32(seed);
   const ctx = buildContext(ev);
   const P = prepare(ev, ctx);

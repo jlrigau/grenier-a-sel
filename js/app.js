@@ -66,7 +66,8 @@ function newEvent(name, date = '') {
 function newExhibitor(fields = {}) {
   return {
     id: uid('ex'), name: '', category: '', tables: 1, electricity: false, zone: '', avoid: [], near: [], locked: false,
-    firstName: '', lastName: '', products: '', grilles: 0, phone: '', email: '', payment: '', notes: '', ...fields,
+    firstName: '', lastName: '', products: '', grilles: 0, phone: '', email: '', payment: '', notes: '',
+    paymentStatus: '', paymentMethod: '', confirmed: false, waitlist: false, arrived: false, ...fields,
   };
 }
 
@@ -212,6 +213,78 @@ function initials(name) {
   return ((main[0] || words[0] || '?')[0] + ((main[1] || '')[0] || '')).toUpperCase();
 }
 
+const PAY_METHODS = { cheque: 'chèque', especes: 'espèces', virement: 'virement', autre: 'autre' };
+const payLabel = (ex) => (ex.paymentStatus === 'paid' ? `payé${ex.paymentMethod ? ' (' + PAY_METHODS[ex.paymentMethod] + ')' : ''}` : ex.paymentStatus === 'pending' ? 'à payer' : '');
+
+// Tous les e-mails de l'événement (hors liste d'attente) : copiés, prêts à coller en copie cachée.
+async function copyEmails() {
+  const mails = [...new Set(cur().exhibitors.filter((e) => !e.waitlist && /@/.test(e.email || '')).map((e) => e.email.trim()))];
+  if (!mails.length) { toast("Aucune adresse e-mail dans la liste.", 'warning'); return; }
+  await copyText(mails.join(', '));
+  toast(`${plural(mails.length, 'adresse copiée', 'adresses copiées')} : collez-les dans le champ « Cci » de votre messagerie.`, 'success',
+    { label: 'Écrire', fn: () => { location.href = `mailto:?bcc=${encodeURIComponent(mails.join(','))}&subject=${encodeURIComponent(cur().name)}`; } });
+}
+
+// ---------- Prévenir un exposant (message prérempli) ----------
+function notifyText(ex, ev = cur()) {
+  const nums = tableNums(ex.id);
+  const who = ex.firstName || ex.name;
+  const when = ev.date ? ` le ${formatLongDate(ev.date).toLowerCase()}` : '';
+  const where = ex.waitlist ? "Vous êtes pour l'instant sur liste d'attente : nous vous recontactons dès qu'une table se libère."
+    : nums.length ? `Votre emplacement : ${nums.length > 1 ? 'tables' : 'table'} ${nums.join(' et ')}${ex.electricity ? ' (avec électricité)' : ''}.`
+    : 'Votre emplacement vous sera communiqué prochainement.';
+  const pay = ex.paymentStatus === 'pending' && ex.payment ? `\nRèglement attendu : ${ex.payment} €.` : '';
+  return `Bonjour ${who},\n\nMerci pour votre inscription à « ${ev.name} »${when} au Grenier à Sel de Gainneville.\n${where}${pay}\n\nÀ bientôt !`;
+}
+function openNotify(id) {
+  const ex = exById(id);
+  if (!ex) return;
+  const text = notifyText(ex);
+  const phone = (ex.phone || '').replace(/[^\d+]/g, '');
+  const subject = `${cur().name} : votre emplacement`;
+  $('#notify-title').textContent = `Prévenir ${ex.name}`;
+  $('#notify-text').value = text;
+  $('#notify-sms').hidden = !phone;
+  $('#notify-mail').hidden = !ex.email;
+  $('#notify-share').hidden = !navigator.share;
+  $('#notify-dialog').dataset.id = id;
+  $('#notify-dialog').dataset.phone = phone;
+  $('#notify-dialog').dataset.subject = subject;
+  $('#notify-hint').textContent = !phone && !ex.email ? "Pas de téléphone ni d'e-mail pour cet exposant : copiez le message pour l'envoyer autrement." : '';
+  $('#notify-dialog').showModal();
+}
+$('#ex-notify').onclick = () => { const id = editingId; exDialog.close(); openNotify(id); };
+$('#notify-dialog').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-notify]');
+  if (!b) return;
+  const dlg = $('#notify-dialog');
+  const ex = exById(dlg.dataset.id);
+  const text = $('#notify-text').value;
+  const how = b.dataset.notify;
+  if (how === 'close') { dlg.close(); return; }
+  if (how === 'sms') location.href = `sms:${dlg.dataset.phone}${isIOS ? '&' : '?'}body=${encodeURIComponent(text)}`;
+  if (how === 'mail') location.href = `mailto:${encodeURIComponent(ex.email)}?subject=${encodeURIComponent(dlg.dataset.subject)}&body=${encodeURIComponent(text)}`;
+  if (how === 'share') { try { await navigator.share({ text }); } catch { return; } }
+  if (how === 'copy') { await copyText(text); toast('Message copié', 'success'); }
+  if (ex && !ex.confirmed && !ex.waitlist) commit((ev) => { exById(ex.id, ev).confirmed = true; });
+  dlg.close();
+});
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* ancien navigateur */ }
+  const t = document.createElement('textarea');
+  t.value = text; document.body.appendChild(t); t.select();
+  try { document.execCommand('copy'); } catch { /* ignore */ }
+  t.remove();
+  return true;
+}
+
+// Libère les tables d'un exposant (passage en liste d'attente).
+function freeTablesOf(ev, id) {
+  for (const [tid, eid] of Object.entries(ev.assignments)) if (eid === id) delete ev.assignments[tid];
+}
+// Exposants qui ont (ou attendent) une table : tout sauf la liste d'attente.
+const activeExhibitors = (ev = cur()) => ev.exhibitors.filter((e) => !e.waitlist);
+
 const exById = (id, ev = cur()) => ev.exhibitors.find((e) => e.id === id);
 const tableById = (id, ev = cur()) => ev.tables.find((t) => t.id === id);
 const tablesOf = (exId, ev = cur()) => ev.tables.filter((t) => ev.assignments[t.id] === exId);
@@ -232,6 +305,7 @@ function assignToTable(exId, tableId, { addOnly = false } = {}) {
   if (owner === exId && !addOnly) return;
   let message = null;
   commit((ev) => {
+    exById(exId, ev).waitlist = false; // posé sur une table : il sort de la liste d'attente
     if (addOnly) {
       if (owner && owner !== exId) message = `${exById(owner, ev).name} a été retiré de la table ${table.num}`;
       ev.assignments[tableId] = exId;
@@ -368,14 +442,16 @@ function formatDate(d) {
 
 function renderStats() {
   const ev = cur();
-  const placed = ev.exhibitors.filter((e) => evaluation.exTables.has(e.id)).length;
+  const active = activeExhibitors(ev);
+  const placed = active.filter((e) => evaluation.exTables.has(e.id)).length;
+  const waiting = ev.exhibitors.length - active.length;
   const used = Object.keys(ev.assignments).filter((t) => tableById(t)).length;
   const usable = ev.tables.filter((t) => !t.blocked).length;
-  const elec = ev.exhibitors.filter((e) => e.electricity).length;
+  const elec = active.filter((e) => e.electricity).length;
   const todo = evaluation.issues.filter((i) => i.severity === 'error' || i.severity === 'warning').length;
   const card = (cls, icon, value, label, act) => `<button class="stat ${cls}" ${act ? `data-stat="${act}"` : ''}><span class="stat-ic">${ic(icon)}</span><span><b>${value}</b><span>${label}</span></span></button>`;
   $('#stats-row').innerHTML = [
-    card('green', 'users', `${placed}/${ev.exhibitors.length}`, 'exposants placés', 'unplaced'),
+    card('green', 'users', `${placed}/${active.length}`, `exposants placés${waiting ? ` · ${waiting} en attente` : ''}`, 'unplaced'),
     card('sky', 'table2', `${used}/${usable}`, 'tables occupées', ''),
     card('mustard', 'zap', elec, `besoin${elec > 1 ? 's' : ''} d'électricité`, 'power'),
     card(todo ? 'coral' : 'ok', todo ? 'alert' : 'check', todo, todo > 1 ? 'points à régler' : todo ? 'point à régler' : 'tout est en ordre', 'checks'),
@@ -442,6 +518,9 @@ function renderExhibitors() {
     .map((ex) => ({ ex, st: exStatus(ex) }))
     .filter(({ ex, st }) => {
       if (q && !`${ex.name} ${ex.category} ${ex.products} ${ex.phone} ${ex.email} ${ex.notes}`.toLowerCase().includes(q)) return false;
+      if (ui.filter === 'waitlist') return !!ex.waitlist;
+      if (ui.filter === 'unpaid') return ex.paymentStatus !== 'paid';
+      if (ex.waitlist) return ui.filter === 'all';
       if (ui.filter === 'unplaced') return !st.placed;
       if (ui.filter === 'issues') return st.worst === 'error' || st.worst === 'warning' || !st.placed;
       return true;
@@ -460,7 +539,8 @@ function renderExhibitors() {
   list.innerHTML = items.map(({ ex, st }) => {
     const nums = tableNums(ex.id);
     const selected = ui.selectedEx === ex.id;
-    const icon = !st.placed ? `<span class="st st-unplaced" title="Non placé">${ic('circle')}</span>`
+    const icon = ex.waitlist ? `<span class="st st-unplaced" title="Liste d'attente">${ic('clock')}</span>`
+      : !st.placed ? `<span class="st st-unplaced" title="Non placé">${ic('circle')}</span>`
       : st.worst === 'error' ? `<span class="st st-error" title="Contrainte non respectée">${ic('alert')}</span>`
       : st.worst === 'warning' ? `<span class="st st-warning" title="À vérifier">${ic('alert')}</span>`
       : `<span class="st st-ok" title="Contraintes respectées">${ic('check')}</span>`;
@@ -477,26 +557,30 @@ function renderExhibitors() {
       if (ex.grilles) rows.push(`<div><span class="k">Grilles</span> ${ex.grilles}</div>`);
       if (ex.phone) rows.push(`<div><span class="k">Téléphone</span> <a href="tel:${esc(ex.phone.replace(/\s/g, ''))}">${esc(ex.phone)}</a></div>`);
       if (ex.email) rows.push(`<div><span class="k">E-mail</span> <a href="mailto:${esc(ex.email)}">${esc(ex.email)}</a></div>`);
-      if (ex.payment) rows.push(`<div><span class="k">Règlement</span> ${esc(ex.payment)} €</div>`);
+      if (ex.payment || ex.paymentStatus) rows.push(`<div><span class="k">Règlement</span> ${ex.payment ? esc(ex.payment) + ' € · ' : ''}${payLabel(ex)}</div>`);
+      if (ex.confirmed) rows.push(`<div><span class="k">Confirmation</span> envoyée</div>`);
       if (ex.notes) rows.push(`<div><span class="k">Notes</span> ${esc(ex.notes)}</div>`);
       const problems = st.issues.filter((i) => i.type !== 'unplaced');
       detail = `<div class="ex-detail">
         ${rows.join('')}
         ${problems.length ? `<ul class="mini-issues">${problems.map((i) => `<li class="sev-${i.severity}">${esc(i.msg)}</li>`).join('')}</ul>` : ''}
         <div class="btn-row">
+          ${ex.waitlist ? `<button class="btn small primary" data-act="waitlist" data-id="${ex.id}">Sortir de la liste d'attente et placer</button>` : `
           <button class="btn small primary" data-act="auto" data-id="${ex.id}">${st.placed ? 'Replacer automatiquement' : 'Placer automatiquement'}</button>
           ${st.placed ? `<button class="btn small" data-act="unplace" data-id="${ex.id}">Retirer du plan</button>` : ''}
           <button class="btn small" data-act="lock" data-id="${ex.id}">${ex.locked ? 'Déverrouiller' : 'Verrouiller'}</button>
+          <button class="btn small" data-act="waitlist" data-id="${ex.id}">Mettre en liste d'attente</button>`}
+          <button class="btn small" data-act="notify" data-id="${ex.id}">${ic('share', 'i-sm')} Prévenir</button>
         </div>
       </div>`;
     }
-    return `<li class="ex-item ${selected ? 'selected' : ''} ${st.placed ? '' : 'unplaced'}" data-ex="${ex.id}">
+    return `<li class="ex-item ${selected ? 'selected' : ''} ${st.placed ? '' : 'unplaced'} ${ex.waitlist ? 'waitlisted' : ''}" data-ex="${ex.id}">
       <span class="avatar handle" data-drag="${ex.id}" style="background:${colorFor(ex)}" title="Glisser sur une table du plan">${esc(initials(ex.name))}</span>
       <div class="ex-main">
         <div class="ex-name">${esc(ex.name)}${ex.electricity ? ` <span class="elec" title="Besoin d'électricité">${ic('zap', 'i-sm')}</span>` : ''}${ex.locked ? ` <span class="muted" title="Verrouillé">${ic('lock', 'i-sm')}</span>` : ''}</div>
-        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.grilles ? ` · ${plural(ex.grilles, 'grille')}` : ''}</div>
+        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.grilles ? ` · ${plural(ex.grilles, 'grille')}` : ''}${ex.paymentStatus === 'pending' ? ' · <span class="tag-pay">À payer</span>' : ex.paymentStatus === 'paid' ? ' · <span class="tag-paid">Payé</span>' : ''}</div>
       </div>
-      <span class="where ${nums.length ? '' : 'todo'} st-${st.worst}">${nums.length ? (nums.length > 1 ? 'Tables ' : 'Table ') + nums.join(' + ') : 'À placer'}</span>
+      <span class="where ${nums.length ? '' : 'todo'} st-${st.worst}">${ex.waitlist ? 'En attente' : nums.length ? (nums.length > 1 ? 'Tables ' : 'Table ') + nums.join(' + ') : 'À placer'}</span>
       ${icon}
       <button class="icon-btn" data-edit="${ex.id}" title="Modifier">${ic('pen')}</button>
       ${detail}
@@ -1018,6 +1102,13 @@ $('#ex-list').addEventListener('click', (e) => {
     if (act.dataset.act === 'auto') placeAndAdjust(id);
     if (act.dataset.act === 'unplace') commit((ev) => unassign(ev, id));
     if (act.dataset.act === 'lock') commit((ev) => { const x = exById(id, ev); x.locked = !x.locked; });
+    if (act.dataset.act === 'waitlist') {
+      const was = !!exById(id).waitlist;
+      commit((ev) => { const x = exById(id, ev); x.waitlist = !was; if (!was) freeTablesOf(ev, id); });
+      if (was) placeAndAdjust(id);
+      else toast(`${exById(id).name} est en liste d'attente : sa table est libérée.`, 'success');
+    }
+    if (act.dataset.act === 'notify') openNotify(id);
     return;
   }
   if (e.target.closest('.ex-detail')) return;
@@ -1255,6 +1346,10 @@ function openExhibitorDialog(id) {
   exForm.phone.value = ex.phone || '';
   exForm.email.value = ex.email || '';
   exForm.notes.value = ex.notes || '';
+  exForm.paymentStatus.value = ex.paymentStatus || '';
+  exForm.paymentMethod.value = ex.paymentMethod || '';
+  exForm.confirmed.checked = !!ex.confirmed;
+  exForm.waitlist.checked = !!ex.waitlist;
   exForm.zone.innerHTML = `<option value="">Indifférent</option>` + REGIONS.map((r) => `<option value="${r.id}">${esc(r.label)}</option>`).join('');
   exForm.zone.value = ex.zone || '';
   const cats = [...new Set(ev.exhibitors.map((e) => (e.category || '').trim()).filter(Boolean))].sort();
@@ -1264,6 +1359,7 @@ function openExhibitorDialog(id) {
   $$('.rel-search', exForm).forEach((i) => { i.value = ''; });
   renderRelations();
   $('#ex-delete').hidden = !id;
+  $('#ex-notify').hidden = !id;
   $('#ex-save-place').textContent = id && tablesOf(id).length ? 'Enregistrer et replacer' : 'Enregistrer et placer';
   exDialog.showModal();
   if (!touchScreen()) exForm.name.focus();
@@ -1327,6 +1423,10 @@ exForm.addEventListener('submit', (e) => {
     phone: exForm.phone.value.trim(),
     email: exForm.email.value.trim(),
     notes: exForm.notes.value.trim(),
+    paymentStatus: exForm.paymentStatus.value,
+    paymentMethod: exForm.paymentMethod.value,
+    confirmed: exForm.confirmed.checked,
+    waitlist: exForm.waitlist.checked,
   };
   const isNew = !editingId;
   const id = editingId || uid('ex');
@@ -1334,10 +1434,12 @@ exForm.addEventListener('submit', (e) => {
     if (isNew) ev.exhibitors.push(newExhibitor({ ...fields, id }));
     else Object.assign(exById(id, ev), fields);
     ensureCategoryColor(ev, fields.category);
+    if (fields.waitlist) freeTablesOf(ev, id);
   });
   exDialog.close();
   ui.selectedEx = id;
   refresh();
+  if (fields.waitlist) { if (isNew) toast(`${name} ajouté en liste d'attente.`, 'success'); return; }
   if (action === 'place') placeAndAdjust(id);
   else if (isNew) toast(`${name} ajouté. Glissez-le sur une table ou utilisez « Placer automatiquement ».`, 'success', { label: 'Placer maintenant', fn: () => placeAndAdjust(id) });
 });
@@ -1507,6 +1609,10 @@ const LIST_COLUMNS = [
   { key: 'grilles', label: 'Grilles', width: 8, get: (ex) => Number(ex.grilles) || 0, num: true },
   { key: 'electricity', label: 'Électricité', width: 11, get: (ex) => (ex.electricity ? 'oui' : 'non') },
   { key: 'payment', label: 'Règlement (€)', width: 13, get: (ex) => (ex.payment === '' || ex.payment == null ? '' : Number(String(ex.payment).replace(',', '.')) || ex.payment), num: true },
+  { key: 'paymentStatus', label: 'Paiement', width: 12, get: (ex) => (ex.paymentStatus === 'paid' ? 'payé' : ex.paymentStatus === 'pending' ? 'à payer' : '') },
+  { key: 'paymentMethod', label: 'Mode', width: 10, get: (ex) => PAY_METHODS[ex.paymentMethod] || '' },
+  { key: 'confirmed', label: 'Confirmation', width: 12, get: (ex) => (ex.confirmed ? 'envoyée' : '') },
+  { key: 'waitlist', label: "Liste d'attente", width: 12, get: (ex) => (ex.waitlist ? 'oui' : '') },
   { key: 'phone', label: 'Téléphone', width: 16, get: (ex) => ex.phone },
   { key: 'email', label: 'E-mail', width: 30, get: (ex) => ex.email },
   { key: 'zone', label: 'Emplacement souhaité', width: 18, get: (ex) => (ex.zone ? regionLabel(ex.zone) : '') },
@@ -1587,7 +1693,7 @@ function renderList() {
       const shown = v === 0 && c.key === 'grilles' ? '' : v;
       return `<td ${lab} class="${c.num ? 'num' : ''} ${shown === '' || shown == null ? 'empty' : ''}">${esc(shown)}</td>`;
     }).join('')}</tr>`).join('') || `<tr><td colspan="${LIST_COLUMNS.length}" class="muted">Aucun exposant.</td></tr>`}</tbody>
-    <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(ev.exhibitors.length, 'exposant')}</td><td class="num"><b>${totals.tables}</b></td><td class="num"><b>${totals.grilles}</b></td><td><b>${totals.elec}</b> oui</td><td class="num"><b>${totals.pay}</b> €</td><td colspan="${LIST_COLUMNS.length - 9}"></td></tr></tfoot>`;
+    <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(ev.exhibitors.length, 'exposant')}</td><td class="num"><b>${totals.tables}</b></td><td class="num"><b>${totals.grilles}</b></td><td><b>${totals.elec}</b> oui</td><td class="num"><b>${totals.pay}</b> €</td><td><b>${ev.exhibitors.filter((x) => x.paymentStatus === 'paid').length}</b> payés</td><td colspan="${LIST_COLUMNS.length - 10}"></td></tr></tfoot>`;
   renderListStatus();
 }
 
@@ -1690,6 +1796,7 @@ $('#list-body').addEventListener('click', (e) => {
   if (act === 'xlsx') exportXlsx();
   if (act === 'csv') exportCsv();
   if (act === 'print') printList();
+  if (act === 'emails') copyEmails();
   if (act === 'link') linkFile();
   if (act === 'unlink') { fileHandle = null; fileHandleEvent = null; renderListStatus(); }
   const row = e.target.closest('tr[data-ex]');
@@ -2307,7 +2414,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v40';
+const APP_VERSION = 'v41';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------
