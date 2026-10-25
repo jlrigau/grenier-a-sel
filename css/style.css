@@ -753,4 +753,11 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 /* En-tête compact : le bouton « Installer » passe dans le menu Données. */
 @media (max-width: 900px) {
   :root.green-head #btn-install { display: none; }
+  /* Menu « Données » : il s'ouvre juste sous l'en-tête, aligné à droite sous son bouton. */
+  :root.green-head .menu-pop {
+    top: calc(env(safe-area-inset-top) + 58px); bottom: auto; left: auto; right: 10px;
+    width: min(330px, calc(100vw - 20px)); padding: 6px; border-radius: 18px;
+    box-shadow: 0 14px 40px rgba(29, 51, 40, .28);
+  }
+  :root.green-head .menu-pop button { padding: 12px; }
 }
