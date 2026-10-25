@@ -786,3 +786,8 @@ input[type=date] {
   min-height: calc(1.45em + 21px - 2px); text-align: left; background-color: #fff;
 }
 input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+
+/* Téléphone : Versions et Réglages sont dans la barre du bas, pas besoin de les répéter ici. */
+@media (max-width: 900px) {
+  .tabs [data-tab="plans"], .tabs [data-tab="settings"] { display: none; }
+}
