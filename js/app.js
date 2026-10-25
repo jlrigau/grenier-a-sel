@@ -382,7 +382,7 @@ function renderStats() {
 }
 
 function renderNav() {
-  const map = { exhibitors: 'plan', checks: 'plan', plans: 'plans', settings: 'settings' };
+  const map = { exhibitors: 'plan', checks: 'plan', plans: 'plans', settings: 'settings', list: 'list' };
   $$('#main-nav [data-nav], #tabbar [data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === map[ui.tab]));
 }
 
@@ -1036,12 +1036,12 @@ $('#ex-filters').addEventListener('click', (e) => {
 });
 // Sur téléphone, « Versions » et « Réglages » sont des pages à part (le reste est masqué) ;
 // le « retour » du téléphone ramène au plan.
-const SUB_PAGES = { plans: 'Versions', settings: 'Réglages' };
-const onSubPage = () => isPhone() && !!SUB_PAGES[ui.tab];
+const SUB_PAGES = { plans: 'Versions', settings: 'Réglages', list: '' };
+const onSubPage = () => isPhone() && ui.tab in SUB_PAGES;
 function renderPage() {
   const sub = onSubPage();
   document.documentElement.classList.toggle('sub-page', sub);
-  $('#page-head').innerHTML = sub ? `<h1>${SUB_PAGES[ui.tab]}</h1><p class="muted">${esc(cur().name)}</p>` : '';
+  $('#page-head').innerHTML = sub && SUB_PAGES[ui.tab] ? `<h1>${SUB_PAGES[ui.tab]}</h1><p class="muted">${esc(cur().name)}</p>` : '';
 }
 function showTab(tab) {
   const wasSub = onSubPage();
@@ -1535,7 +1535,7 @@ function markExported(how) {
   db.listExports[cur().id] = { hash: listHash(), at: Date.now(), how };
   save();
   renderListBadge();
-  if ($('#list-dialog').open) renderListStatus();
+  if (listShown()) renderListStatus();
 }
 
 function renderListBadge() {
@@ -1583,10 +1583,18 @@ function renderList() {
   renderListStatus();
 }
 
+// La liste : fenêtre sur ordinateur, page dédiée sur téléphone (le même contenu est déplacé).
+const listShown = () => $('#list-dialog').open || (ui.tab === 'list' && isPhone());
+function placeList() {
+  const target = isPhone() ? $('#tab-list') : $('#list-dialog');
+  if ($('#list-body').parentElement !== target) target.appendChild($('#list-body'));
+}
 function openList() {
   listUi.search = '';
   $('#list-search').value = '';
   $('#list-link').hidden = !('showSaveFilePicker' in window);
+  placeList();
+  if (isPhone()) { showTab('list'); renderList(); return; }
   renderList();
   if (!$('#list-dialog').open) $('#list-dialog').showModal();
 }
@@ -1654,7 +1662,7 @@ async function writeLinkedFile() {
 
 function scheduleFileSync() {
   renderListBadge();
-  if ($('#list-dialog').open) renderList();
+  if (listShown()) renderList();
   if (!fileHandle) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(writeLinkedFile, 1200);
@@ -1662,7 +1670,7 @@ function scheduleFileSync() {
 
 $('#btn-list').onclick = openList;
 $('#list-search').addEventListener('input', (e) => { listUi.search = e.target.value; renderList(); });
-$('#list-dialog').addEventListener('click', (e) => {
+$('#list-body').addEventListener('click', (e) => {
   const th = e.target.closest('th[data-sort]');
   if (th) {
     if (listUi.sort === th.dataset.sort) listUi.dir *= -1; else { listUi.sort = th.dataset.sort; listUi.dir = 1; }
@@ -1670,7 +1678,7 @@ $('#list-dialog').addEventListener('click', (e) => {
     return;
   }
   const act = e.target.closest('[data-list]')?.dataset.list;
-  if (act === 'close') $('#list-dialog').close();
+  if (act === 'close') { if ($('#list-dialog').open) $('#list-dialog').close(); else showTab('exhibitors'); }
   if (act === 'xlsx') exportXlsx();
   if (act === 'csv') exportCsv();
   if (act === 'print') printList();
@@ -2107,7 +2115,10 @@ document.documentElement.classList.toggle('standalone', standalone());
 // En-tête vert compact : app installée, ou téléphone dans le navigateur (suivi si la largeur change).
 const phoneWidth = window.matchMedia('(max-width: 900px)');
 const syncGreenHead = () => document.documentElement.classList.toggle('green-head', standalone() || phoneWidth.matches);
-phoneWidth.addEventListener('change', syncGreenHead);
+phoneWidth.addEventListener('change', () => {
+  syncGreenHead();
+  if (!isPhone() && ui.tab === 'list') { ui.tab = 'exhibitors'; renderSidebar(); }
+});
 syncGreenHead();
 // Bouton « Installer » : dans le menu Données (l'en-tête compact n'a pas la place).
 new MutationObserver(() => { $('#menu-install').hidden = $('#btn-install').hidden; })
@@ -2193,7 +2204,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v32';
+const APP_VERSION = 'v33';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;

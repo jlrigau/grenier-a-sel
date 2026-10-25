@@ -771,3 +771,9 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
   :root.sub-page .page-head h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
   :root.sub-page .page-head p { margin: 2px 0 0; }
 }
+
+/* Liste : le même contenu sert à la fenêtre (ordinateur) et à la page (téléphone). */
+.list-body { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+#tab-list .close-x { display: none; }
+#tab-list .list-head h2 { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+#tab-list .list-scroll { overflow: visible; }

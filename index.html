@@ -191,6 +191,7 @@
       <section class="tab-panel" id="tab-checks" hidden></section>
       <section class="tab-panel" id="tab-plans" hidden></section>
       <section class="tab-panel" id="tab-settings" hidden></section>
+      <section class="tab-panel" id="tab-list" hidden></section>
     </aside>
   </main>
 
@@ -328,6 +329,7 @@
   <input type="file" id="fiche-files" accept="image/*" multiple hidden>
 
   <dialog id="list-dialog" class="full">
+    <div class="list-body" id="list-body">
     <div class="list-head">
       <h2>Liste des exposants <span id="list-count" class="muted"></span></h2>
       <input type="search" id="list-search" placeholder="Rechercher…" autocomplete="off">
@@ -342,6 +344,7 @@
     <p class="list-status" id="list-status"></p>
     <div class="list-scroll"><table class="list-table" id="list-table"></table></div>
     <p class="muted small">Cliquez une ligne pour modifier l'exposant · cliquez un titre de colonne pour trier.</p>
+    </div>
   </dialog>
 
   <dialog id="install-dialog">
