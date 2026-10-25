@@ -15,13 +15,26 @@
   <meta name="apple-mobile-web-app-title" content="Grenier à Sel">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/themes.css">
+  <script>
+    // Thème choisi (Réglages → Apparence, ou ?theme=… dans l'adresse), appliqué avant l'affichage.
+    (function () {
+      var themes = ['sel', 'clair', 'atlantique', 'marche', 'nuit', 'papier'];
+      var t = new URLSearchParams(location.search).get('theme');
+      try {
+        if (t && themes.indexOf(t) >= 0) localStorage.setItem('grenier-a-sel/theme', t);
+        else t = localStorage.getItem('grenier-a-sel/theme');
+      } catch (e) {}
+      if (t && t !== 'sel' && themes.indexOf(t) >= 0) document.documentElement.dataset.theme = t;
+    })();
+  </script>
 </head>
 <body>
   <svg id="svg-defs" width="0" height="0" aria-hidden="true" style="position:absolute">
     <defs>
       <pattern id="hatch" width="0.3" height="0.3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="0.3" height="0.3" fill="#f4eee6"/>
-        <line x1="0" y1="0" x2="0" y2="0.3" stroke="#e6dacb" stroke-width="0.06"/>
+        <rect class="hatch-bg" width="0.3" height="0.3"/>
+        <line class="hatch-line" x1="0" y1="0" x2="0" y2="0.3" stroke-width="0.06"/>
       </pattern>
       <pattern id="hatch-red" width="0.4" height="0.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
         <line x1="0" y1="0" x2="0" y2="0.4" stroke="#fecdca" stroke-width="0.07"/>
@@ -60,7 +73,7 @@
   </svg>
   <header class="topbar">
     <div class="brand">
-      <img class="logo" src="icons/logo.svg" alt="" width="36" height="36">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect class="lg-bg" width="64" height="64" rx="15"/><path class="lg-fg" d="M11 32.5 L32 17.5 L53 32.5 V51 H11 Z"/><path class="lg-roof" d="M6 34 L32 14.5 L58 34" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect class="lg-acc" x="15" y="38" width="7" height="5.5" rx="1.2"/><rect class="lg-acc" x="42" y="38" width="7" height="5.5" rx="1.2"/><path class="lg-door" d="M26.5 51 V40.5 a1.5 1.5 0 0 1 1.5 -1.5 H36 a1.5 1.5 0 0 1 1.5 1.5 V51 Z"/><path class="lg-c1" d="M32 21.6 L36.4 24 L32 26.4 L27.6 24 Z"/><path class="lg-c2" d="M27.6 24 L32 26.4 V31.2 L27.6 28.8 Z"/><path class="lg-c3" d="M36.4 24 L32 26.4 V31.2 L36.4 28.8 Z"/></svg>
       <div>
         <strong>Grenier à Sel</strong>
         <small>Plans d'événements · Gainneville</small>

@@ -450,10 +450,35 @@ function renderChecks() {
   `;
 }
 
+// Directions de design proposées (voir css/themes.css).
+const THEMES = [
+  { id: 'sel', name: 'Sel et brique', desc: 'Chaleureux, terre cuite et sable', colors: ['#faf6f1', '#c2512b', '#ffffff', '#eab59e', '#2b211c'] },
+  { id: 'clair', name: 'Clair', desc: 'Sobre et professionnel', colors: ['#f5f6f8', '#2453c4', '#ffffff', '#b9cbf3', '#101828'] },
+  { id: 'atlantique', name: 'Atlantique', desc: 'Bleu marine et sable, arrondi', colors: ['#f2f5f7', '#0f2537', '#1d5f8a', '#e9c46a', '#ffffff'] },
+  { id: 'marche', name: 'Marché', desc: 'Vert sapin et moutarde, convivial', colors: ['#f5f4ee', '#2f6b4f', '#ffffff', '#f2c14e', '#1f2a24'] },
+  { id: 'nuit', name: 'Nuit', desc: 'Mode sombre moderne', colors: ['#0e1116', '#8b7cf6', '#161a21', '#c4bbfb', '#e8eaf0'] },
+  { id: 'papier', name: 'Papier', desc: 'Éditorial, façon plan d\'architecte', colors: ['#f2eee5', '#1b1a17', '#fbf9f4', '#c8372d', '#c9bfac'] },
+];
+const currentTheme = () => document.documentElement.dataset.theme || 'sel';
+
+function setTheme(id) {
+  if (id === 'sel') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = id;
+  try { localStorage.setItem('grenier-a-sel/theme', id); } catch { /* ignore */ }
+  const meta = document.querySelector('meta[name=theme-color]');
+  if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#c2512b';
+  refresh();
+}
+
 function renderSettings() {
   const ev = cur();
   const s = ev.settings;
   $('#tab-settings').innerHTML = `
+    <h3>Apparence</h3>
+    <div class="theme-grid">${THEMES.map((t) => `<button class="theme-card ${currentTheme() === t.id ? 'active' : ''}" data-theme-id="${t.id}">
+      <span class="theme-swatch">${t.colors.map((c) => `<span style="background:${c}"></span>`).join('')}</span>
+      <b>${esc(t.name)}</b><small>${esc(t.desc)}</small></button>`).join('')}</div>
+
     <h3>Événement</h3>
     <label>Nom <input data-ev="name" value="${esc(ev.name)}" maxlength="80"></label>
     <label>Date <input type="date" data-ev="date" value="${esc(ev.date)}"></label>
@@ -979,6 +1004,8 @@ $('#tab-settings').addEventListener('change', (e) => {
   }
 });
 $('#tab-settings').addEventListener('click', (e) => {
+  const themeBtn = e.target.closest('[data-theme-id]');
+  if (themeBtn) { setTheme(themeBtn.dataset.themeId); return; }
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'reset-tables' && confirm('Remplacer toutes les tables par les 48 tables du plan papier ? Les attributions seront perdues. (Annulable avec Ctrl+Z)')) {
     commit((ev) => { ev.tables = defaultTables(); ev.assignments = {}; });
