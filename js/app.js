@@ -2164,7 +2164,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v25';
+const APP_VERSION = 'v26';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;
