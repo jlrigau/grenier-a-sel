@@ -87,6 +87,19 @@ Aucune installation : il suffit de servir le dossier, par exemple
 Le workflow `.github/workflows/pages.yml` publie le site sur GitHub Pages à
 chaque push sur `main` (Settings → Pages → Source : **GitHub Actions**).
 
+## Exemple fourni
+
+L'événement « Démonstration (données fictives) » créé au premier lancement ne
+contient que des données inventées : libellés génériques (« Miel (démo) »…),
+aucun nom de personne, téléphone ou e-mail. Il peut être supprimé dans
+« Réglages ». Le dépôt ne contient aucune donnée personnelle.
+
+## Design
+
+Police Inter (fournie dans `vendor/fonts`, licence OFL), icônes vectorielles
+intégrées (`index.html`, symboles `#i-*`), jetons de couleur et d'espacement
+dans `css/style.css` (`:root`).
+
 ## Structure
 
 - `js/room.js` : géométrie de la salle (en mètres), tables et prises par défaut.

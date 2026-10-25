@@ -18,17 +18,48 @@
 <body>
   <svg id="svg-defs" width="0" height="0" aria-hidden="true" style="position:absolute">
     <defs>
-      <pattern id="hatch" width="0.35" height="0.35" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="0.35" stroke="#c9c4b8" stroke-width="0.08"/>
+      <pattern id="hatch" width="0.3" height="0.3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="0.3" height="0.3" fill="#f2f4f7"/>
+        <line x1="0" y1="0" x2="0" y2="0.3" stroke="#dde1e7" stroke-width="0.06"/>
       </pattern>
       <pattern id="hatch-red" width="0.4" height="0.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="0.4" stroke="#f3a5a5" stroke-width="0.07"/>
+        <line x1="0" y1="0" x2="0" y2="0.4" stroke="#fecdca" stroke-width="0.07"/>
       </pattern>
     </defs>
+    <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+    <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 7v7M9 11l3 3 3-3"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01"/></symbol>
+    <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4M12 2v13"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
   </svg>
   <header class="topbar">
     <div class="brand">
-      <span class="logo" aria-hidden="true"></span>
+      <span class="logo" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="#i-layout"/></svg></span>
       <div>
         <strong>Grenier à Sel</strong>
         <small>Plans d'événements · Gainneville</small>
@@ -37,24 +68,24 @@
     <div class="event-picker">
       <label for="event-select" class="sr-only">Événement</label>
       <select id="event-select"></select>
-      <button id="btn-new-event" class="btn">+ Événement</button>
+      <button id="btn-new-event" class="btn"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg> Événement</button>
       <button id="plan-status" class="plan-pill"></button>
     </div>
     <div class="top-actions">
-      <button id="btn-install" class="btn primary" hidden title="Installer l'outil comme une application">📲 Installer</button>
-      <button id="btn-undo" class="btn icon" title="Annuler (Ctrl+Z)">↶</button>
-      <button id="btn-redo" class="btn icon" title="Rétablir (Ctrl+Y)">↷</button>
+      <button id="btn-install" class="btn primary" hidden title="Installer l'outil comme une application"><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg><span class="lbl"> Installer</span></button>
+      <button id="btn-undo" class="btn icon" title="Annuler (Ctrl+Z)"><svg class="i" aria-hidden="true"><use href="#i-undo"/></svg></button>
+      <button id="btn-redo" class="btn icon" title="Rétablir (Ctrl+Y)"><svg class="i" aria-hidden="true"><use href="#i-redo"/></svg></button>
       <div class="menu">
-        <button class="btn" id="btn-data-menu">Données ▾</button>
+        <button class="btn" id="btn-data-menu">Données <svg class="i i-sm" aria-hidden="true"><use href="#i-chevron"/></svg></button>
         <div class="menu-pop" id="data-menu" hidden>
-          <button data-action="export-event">Exporter cet événement (.json)</button>
-          <button data-action="export-all">Exporter tous les événements (.json)</button>
-          <button data-action="import">Importer un fichier .json…</button>
-          <button data-action="list">Liste des exposants (Excel / CSV)…</button>
-          <button data-action="export-png">Image du plan (.png)</button>
+          <button data-action="export-event"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg>Exporter cet événement (.json)</button>
+          <button data-action="export-all"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg>Exporter tous les événements (.json)</button>
+          <button data-action="import"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Importer un fichier .json…</button>
+          <button data-action="list"><svg class="i" aria-hidden="true"><use href="#i-table"/></svg>Liste des exposants (Excel / CSV)…</button>
+          <button data-action="export-png"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Image du plan (.png)</button>
         </div>
       </div>
-      <button id="btn-print" class="btn">Imprimer</button>
+      <button id="btn-print" class="btn"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg><span class="lbl"> Imprimer</span></button>
     </div>
   </header>
 
@@ -70,21 +101,22 @@
       <section class="tab-panel" id="tab-exhibitors">
         <div class="panel-head">
           <div class="btn-row add-row">
-            <button class="btn primary" id="btn-fiches" title="Photographiez ou choisissez les photos des fiches d'inscription (une fiche par photo)">📷 Importer des fiches</button>
-            <button class="btn" id="btn-fiche-manual" title="Recopier une fiche papier à la main">✍ Saisir</button>
-            <button class="btn icon" id="btn-add-ex" title="Ajouter un exposant (formulaire complet)">+</button>
+            <button class="btn primary" id="btn-fiches" title="Photographiez ou choisissez les photos des fiches d'inscription (une fiche par photo)"><svg class="i" aria-hidden="true"><use href="#i-camera"/></svg> Importer des fiches</button>
+            <button class="btn" id="btn-fiche-manual" title="Recopier une fiche papier à la main"><svg class="i" aria-hidden="true"><use href="#i-pen"/></svg> Saisir</button>
+            <button class="btn icon" id="btn-add-ex" title="Ajouter un exposant (formulaire complet)"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
           </div>
           <div class="btn-row">
             <button class="btn" id="btn-place-missing" title="Place les exposants non placés en déplaçant le moins possible les autres">Placer les non placés</button>
             <button class="btn" id="btn-optimize" title="Recalcule tout le plan (les exposants verrouillés restent en place)">Tout réorganiser</button>
           </div>
           <input type="search" id="ex-search" placeholder="Rechercher un exposant…" autocomplete="off">
-          <button class="btn block list-btn" id="btn-list">📋 Liste des exposants · exporter <span id="list-badge" class="list-badge" hidden>à réexporter</span></button>
+          <button class="btn block list-btn" id="btn-list"><span><svg class="i" aria-hidden="true"><use href="#i-table"/></svg> Liste des exposants · export</span><span id="list-badge" class="list-badge" hidden>à réexporter</span></button>
           <div class="chips" id="ex-filters">
             <button data-filter="all" class="active">Tous</button>
             <button data-filter="unplaced">Non placés</button>
             <button data-filter="issues">Problèmes</button>
           </div>
+          <p class="demo-banner" id="demo-banner" hidden><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>Événement de démonstration : toutes les données sont <b>fictives</b>. Vous pouvez le supprimer dans « Réglages ».</span></p>
           <div class="stats" id="ex-stats"></div>
         </div>
         <ul class="ex-list" id="ex-list"></ul>
@@ -100,21 +132,24 @@
         <div class="segmented" id="mode-switch">
           <button data-mode="place" class="active" title="Attribuer les tables aux exposants">Placement</button>
           <button data-mode="layout" title="Déplacer, ajouter, pivoter des tables">Tables</button>
-          <button data-mode="power" title="Voir et modifier les tables qui ont l'électricité">Électricité ⚡</button>
+          <button data-mode="power" title="Voir et modifier les tables qui ont l'électricité"><svg class="i" aria-hidden="true"><use href="#i-zap"/></svg> Électricité</button>
         </div>
         <div class="toolbar-extra" id="toolbar-extra"></div>
         <div class="zoom">
-          <button class="btn icon" id="zoom-out" title="Dézoomer">−</button>
-          <button class="btn icon" id="zoom-fit" title="Ajuster à l'écran">⤢</button>
-          <button class="btn icon" id="zoom-in" title="Zoomer">+</button>
+          <button class="btn icon" id="zoom-out" title="Dézoomer"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
+          <button class="btn icon" id="zoom-fit" title="Ajuster à l'écran"><svg class="i" aria-hidden="true"><use href="#i-maximize"/></svg></button>
+          <button class="btn icon" id="zoom-in" title="Zoomer"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
         </div>
       </div>
       <div class="mode-hint" id="mode-hint"></div>
       <div class="notice" id="notice" hidden>
+        <svg class="i" aria-hidden="true"><use href="#i-info"/></svg>
+        <div>
         Plan reconstitué d'après le plan papier : les cotes sont approximatives.
         <b>Électricité : seules les tables le long des murs y ont accès</b> (pas l'îlot central ni la scène) ; exceptions possibles en mode « Électricité ».
         Pensez à <b>enregistrer vos plans</b> (onglet « Plans ») et à les exporter pour les garder.
         <button class="link" id="notice-close">Compris</button>
+        </div>
       </div>
       <svg id="plan" xmlns="http://www.w3.org/2000/svg">
         <g id="viewport">
@@ -193,7 +228,7 @@
     <form id="fiche-form" method="dialog" novalidate>
       <div class="fiche-head">
         <h2>Fiche d'inscription <span id="fiche-count" class="muted"></span></h2>
-        <span class="muted small">🔒 Lecture faite sur cet appareil : la photo n'est envoyée nulle part.</span>
+        <span class="privacy"><svg class="i i-sm" aria-hidden="true"><use href="#i-shield"/></svg> Lecture sur cet appareil : la photo n'est envoyée nulle part</span>
       </div>
       <div class="fiche-body">
         <div class="fiche-photo" id="fiche-photo">
@@ -255,11 +290,11 @@
       <h2>Liste des exposants <span id="list-count" class="muted"></span></h2>
       <input type="search" id="list-search" placeholder="Rechercher…" autocomplete="off">
       <div class="list-actions">
-        <button class="btn primary" data-list="xlsx">⬇ Excel</button>
-        <button class="btn" data-list="csv">⬇ CSV</button>
-        <button class="btn" data-list="print">Imprimer</button>
-        <button class="btn" data-list="link" id="list-link" hidden title="Choisir un fichier Excel sur l'ordinateur qui sera mis à jour à chaque modification">🔗 Fichier mis à jour automatiquement…</button>
-        <button class="icon-btn close-x" data-list="close" title="Fermer">×</button>
+        <button class="btn primary" data-list="xlsx"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg> Excel</button>
+        <button class="btn" data-list="csv"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg> CSV</button>
+        <button class="btn" data-list="print"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg> Imprimer</button>
+        <button class="btn" data-list="link" id="list-link" hidden title="Choisir un fichier Excel sur l'ordinateur qui sera mis à jour à chaque modification"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg> Fichier synchronisé…</button>
+        <button class="icon-btn close-x" data-list="close" title="Fermer"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
     </div>
     <p class="list-status" id="list-status"></p>

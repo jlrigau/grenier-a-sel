@@ -5,8 +5,10 @@ import { buildXlsx } from './xlsx.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
 const NOTICE_KEY = 'grenier-a-sel/notice-dismissed';
-const PALETTE = ['#8ecae6', '#f6bd60', '#90be6d', '#f28482', '#cdb4db', '#84a59d', '#ffafcc', '#d4a373', '#f9e07f', '#9fa8da', '#a8e6cf', '#ffab91', '#b0bec5', '#c5d86d'];
-const NO_CATEGORY_COLOR = '#d9dee6';
+const PALETTE = ['#b2ccff', '#fedf89', '#a6f4c5', '#fecdca', '#d9d6fe', '#99f6e0', '#fcceee', '#fddcab', '#c7d7fe', '#d0f8ab', '#b9e6fe', '#e4e7ec', '#fecdd6', '#d6bbfb'];
+const OLD_PALETTE = ['#8ecae6', '#f6bd60', '#90be6d', '#f28482', '#cdb4db', '#84a59d', '#ffafcc', '#d4a373', '#f9e07f', '#9fa8da', '#a8e6cf', '#ffab91', '#b0bec5', '#c5d86d'];
+const ic = (name, cls = '') => `<svg class="i${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const NO_CATEGORY_COLOR = '#eaecf0';
 const SNAP = 0.05;
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -47,7 +49,8 @@ function normalizeEvent(ev) {
     delete ex.contact;
     return ex;
   });
-  out.categoryColors = ev.categoryColors || {};
+  out.categoryColors = Object.fromEntries(Object.entries(ev.categoryColors || {}).map(([k, c]) => [k, OLD_PALETTE.includes(c) ? PALETTE[OLD_PALETTE.indexOf(c)] : c]));
+  if (out.name === 'Exemple – Marché de Noël') { out.demo = true; out.name = 'Démonstration (données fictives)'; }
   out.assignments = ev.assignments || {};
   delete out.outlets;
   delete out.settings.elecDistance;
@@ -57,35 +60,38 @@ function normalizeEvent(ev) {
   return out;
 }
 
+// Événement de démonstration : données 100 % fictives (aucune personne ni entreprise réelle,
+// aucun téléphone ni e-mail). Il peut être supprimé dans « Réglages ».
 function makeDemoEvent() {
-  const ev = newEvent('Exemple – Marché de Noël', '');
+  const ev = newEvent('Démonstration (données fictives)', '');
+  ev.demo = true;
   const list = [
-    ['Miel des Coteaux', 'Alimentation', 1, false, '', ['Rucher du Vexin']],
-    ['Rucher du Vexin', 'Alimentation', 1, false, ''],
-    ['Crêpes de Mamie', 'Restauration', 2, true, ''],
-    ['Chocolaterie Martin', 'Alimentation', 1, true, ''],
-    ['Bijoux Lune', 'Bijoux', 1, false, '', ['Atelier Perles']],
-    ['Atelier Perles', 'Bijoux', 1, false, ''],
-    ['Poterie du Grès', 'Artisanat', 2, false, ''],
-    ['Luminaires Récup', 'Décoration', 1, true, ''],
-    ['Bougies & Cie', 'Décoration', 1, false, ''],
-    ['Couture Créative', 'Textile', 2, true, ''],
-    ['Tricots de Laine', 'Textile', 1, false, ''],
-    ['Librairie Ambulante', 'Livres', 2, false, 'pourtour'],
-    ['Club photo', 'Association', 2, false, 'hall'],
-    ['Savonnerie artisanale', 'Cosmétique', 1, false, ''],
-    ['Jouets en bois', 'Artisanat', 1, false, 'ilot'],
-    ['Peintures sur grilles', 'Art', 1, false, 'ilot'],
+    ['Miel (démo)', 'Alimentation', 1, false, '', ['Confitures (démo)']],
+    ['Confitures (démo)', 'Alimentation', 1, false, ''],
+    ['Crêpes (démo)', 'Restauration', 2, true, ''],
+    ['Chocolats (démo)', 'Alimentation', 1, true, ''],
+    ['Bijoux (démo)', 'Bijoux', 1, false, '', ['Perles (démo)']],
+    ['Perles (démo)', 'Bijoux', 1, false, ''],
+    ['Poterie (démo)', 'Céramique', 2, false, ''],
+    ['Luminaires (démo)', 'Décoration', 1, true, ''],
+    ['Bougies (démo)', 'Décoration', 1, false, ''],
+    ['Couture (démo)', 'Vêtements', 2, true, ''],
+    ['Tricots (démo)', 'Vêtements', 1, false, ''],
+    ['Livres (démo)', 'Livres', 2, false, 'pourtour'],
+    ['Association (démo)', 'Association', 2, false, 'hall'],
+    ['Savons (démo)', 'Cosmétique', 1, false, ''],
+    ['Jouets en bois (démo)', 'Jouets', 1, false, 'ilot'],
+    ['Peintures (démo)', 'Art', 1, false, 'ilot'],
   ];
   const byName = {};
   for (const [name, category, tables, electricity, zone] of list) {
-    const ex = newExhibitor({ name, category, tables, electricity, zone });
+    const ex = newExhibitor({ name, category, tables, electricity, zone, products: name.replace(' (démo)', ''), grilles: zone === 'ilot' ? 2 : 0, payment: String(tables * 5) });
     byName[name] = ex;
     ev.exhibitors.push(ex);
     ensureCategoryColor(ev, category);
   }
   for (const [name, , , , , avoid] of list) if (avoid) byName[name].avoid = avoid.map((n) => byName[n].id);
-  byName['Tricots de Laine'].near = [byName['Couture Créative'].id];
+  byName['Tricots (démo)'].near = [byName['Couture (démo)'].id];
   ev.assignments = optimize(ev, { mode: 'fresh', seed: 7, iterations: 20000 }).assignments;
   return ev;
 }
@@ -336,6 +342,7 @@ function renderExhibitors() {
   const needed = ev.exhibitors.reduce((s, e) => s + (Number(e.tables) || 1), 0);
   const free = ev.tables.filter((t) => !ev.assignments[t.id] && !t.blocked).length;
   const grilles = ev.exhibitors.reduce((s, e) => s + (Number(e.grilles) || 0), 0);
+  $('#demo-banner').hidden = !ev.demo;
   $('#ex-stats').innerHTML = `<span><b>${placedCount}</b>/${ev.exhibitors.length} placés</span><span><b>${needed}</b> tables demandées / ${ev.tables.filter((t) => !t.blocked).length}</span><span><b>${free}</b> libres</span><span><b>${grilles}</b> grilles${ev.settings.grillesAvailable ? ' / ' + ev.settings.grillesAvailable : ''}</span>`;
 
   const items = ev.exhibitors
@@ -360,10 +367,10 @@ function renderExhibitors() {
   list.innerHTML = items.map(({ ex, st }) => {
     const nums = tableNums(ex.id);
     const selected = ui.selectedEx === ex.id;
-    const icon = !st.placed ? '<span class="st st-unplaced" title="Non placé">○</span>'
-      : st.worst === 'error' ? '<span class="st st-error" title="Contrainte non respectée">!</span>'
-      : st.worst === 'warning' ? '<span class="st st-warning" title="À vérifier">!</span>'
-      : '<span class="st st-ok" title="OK">✓</span>';
+    const icon = !st.placed ? `<span class="st st-unplaced" title="Non placé">${ic('circle')}</span>`
+      : st.worst === 'error' ? `<span class="st st-error" title="Contrainte non respectée">${ic('alert')}</span>`
+      : st.worst === 'warning' ? `<span class="st st-warning" title="À vérifier">${ic('alert')}</span>`
+      : `<span class="st st-ok" title="Contraintes respectées">${ic('check')}</span>`;
     let detail = '';
     if (selected) {
       const names = (ids) => ids.map((id) => exById(id)?.name).filter(Boolean).map(esc).join(', ');
@@ -391,15 +398,15 @@ function renderExhibitors() {
       </div>`;
     }
     return `<li class="ex-item ${selected ? 'selected' : ''} ${st.placed ? '' : 'unplaced'}" data-ex="${ex.id}">
-      <span class="handle" data-drag="${ex.id}" title="Glisser sur une table du plan">⠿</span>
+      <span class="handle" data-drag="${ex.id}" title="Glisser sur une table du plan">${ic('grip')}</span>
       <span class="dot" style="background:${colorFor(ex)}"></span>
       <div class="ex-main">
         <div class="ex-name">${esc(ex.name)}</div>
-        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.grilles ? ` · ${plural(ex.grilles, 'grille')}` : ''}${ex.electricity ? ' · <span class="elec" title="Besoin d\'électricité">⚡</span>' : ''}${ex.locked ? ' · 🔒' : ''}</div>
+        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.grilles ? ` · ${plural(ex.grilles, 'grille')}` : ''}${ex.electricity ? ` · <span class="elec" title="Besoin d'électricité">${ic('zap', 'i-sm')}</span>` : ''}${ex.locked ? ` · <span title="Verrouillé">${ic('lock', 'i-sm')}</span>` : ''}</div>
         <div class="ex-where">${nums.length ? 'Table' + (nums.length > 1 ? 's' : '') + ' ' + nums.join(', ') : 'Non placé'}</div>
       </div>
       ${icon}
-      <button class="icon-btn" data-edit="${ex.id}" title="Modifier">✎</button>
+      <button class="icon-btn" data-edit="${ex.id}" title="Modifier">${ic('pen')}</button>
       ${detail}
     </li>`;
   }).join('');
@@ -424,7 +431,7 @@ function renderChecks() {
       <div class="card ${errors.length ? 'bad' : 'good'}"><b>${errors.length}</b><span>${errors.length > 1 ? 'conflits' : 'conflit'}</span></div>
       <div class="card"><b>${elecNeeds}</b><span>besoin${elecNeeds > 1 ? 's' : ''} électrique${elecNeeds > 1 ? 's' : ''}</span></div>
     </div>
-    ${!evaluation.issues.length ? '<p class="all-good">✓ Toutes les contraintes sont respectées.</p>' : ''}
+    ${!evaluation.issues.length ? `<p class="all-good">${ic('check')} Toutes les contraintes sont respectées.</p>` : ''}
     ${section('Conflits à corriger', errors, 'h-error')}
     ${section('Points à vérifier', warnings, 'h-warning')}
     ${section('Souhaits non satisfaits', infos, 'h-info')}
@@ -508,7 +515,7 @@ function roomSVG() {
     const x2 = e.x + e.dir * 0.9;
     out.push(`<g class="exit"><line x1="${e.x}" y1="${e.y}" x2="${x2}" y2="${e.y}"/><path d="M${x2} ${e.y} l${-e.dir * 0.3} -0.22 v0.44 z"/></g>`);
   }
-  out.push(`<text x="${ROOM.bounds.w / 2}" y="-0.5" class="dim">Sorties de secours <tspan class="exit-sym">➜</tspan> · cotes approximatives · 1 carreau = 1 m</text>`);
+  out.push(`<text x="${ROOM.bounds.w / 2}" y="-0.5" class="dim">Sorties de secours <tspan class="exit-sym">→</tspan> · cotes approximatives · 1 carreau = 1 m</text>`);
   // Échelle 5 m
   out.push(`<g class="scale"><line x1="0" y1="25" x2="5" y2="25"/><line x1="0" y1="24.8" x2="0" y2="25.2"/><line x1="5" y1="24.8" x2="5" y2="25.2"/><text x="2.5" y="25.6">5 m</text></g>`);
   return out.join('');
@@ -550,7 +557,7 @@ function tablesSVG(ev, { print = false } = {}) {
     if (sel && !ex && ui.mode === 'place' && !(sel.electricity && hasPower(t))) cls.push('dim');
     const powered = hasPower(t);
     if (!print && ui.mode === 'power') cls.push(powered ? 'power-on' : 'power-off');
-    const fill = ex ? colorFor(ex, ev) : t.blocked ? '#e7e5e4' : '#ffffff';
+    const fill = ex ? colorFor(ex, ev) : t.blocked ? '#f2f4f7' : '#ffffff';
     const L = Math.max(w, h);
     const fs = 0.25;
     const maxChars = Math.max(3, Math.floor((L - 0.15) / (fs * 0.56)));
@@ -558,16 +565,20 @@ function tablesSVG(ev, { print = false } = {}) {
     if (name.length > maxChars) name = name.slice(0, maxChars - 1) + '…';
     const rot = vertical ? ' transform="rotate(-90)"' : '';
     const badges = [];
-    if (ex && ex.electricity) badges.push('⚡');
-    if (ex && ex.locked) badges.push('🔒');
-    const bx = vertical ? -w / 2 + 0.06 : w / 2 - 0.06;
-    const by = vertical ? h / 2 - 0.08 : -h / 2 + 0.24;
+    if (ex && ex.electricity) badges.push('zap');
+    if (ex && ex.locked) badges.push('lock');
+    const S = 0.2;
+    const badgeSvg = badges.map((b, k) => {
+      const bx = vertical ? -w / 2 + 0.05 : w / 2 - 0.05 - S * (k + 1);
+      const by = vertical ? h / 2 - 0.05 - S * (k + 1) : -h / 2 + 0.05;
+      return `<use href="#i-${b}" class="t-icon ${b}" x="${bx}" y="${by}" width="${S}" height="${S}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }).join('');
     return `<g class="${cls.join(' ')}" data-table="${t.id}" transform="translate(${t.x} ${t.y})">
-      <rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="0.05" fill="${fill}"/>
+      <rect class="t-body" x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="0.04" fill="${fill}"/>
       <text class="tnum" x="${-w / 2 + 0.07}" y="${-h / 2 + 0.2}">${t.num}</text>
       ${name ? `<text class="tname ${ex ? '' : 'muted'}" y="0.09"${rot}>${esc(name)}</text>` : ''}
       ${powered ? `<circle class="pwr" cx="${w / 2 - 0.11}" cy="${h / 2 - 0.11}" r="0.07"><title>Électricité disponible</title></circle>` : ''}
-      ${badges.length ? `<text class="tbadge" x="${bx}" y="${by}" text-anchor="${vertical ? 'start' : 'end'}">${badges.join('')}</text>` : ''}
+      ${badgeSvg}
     </g>`;
   }).join('');
 }
@@ -583,7 +594,7 @@ function renderMap() {
     power: 'Tables en jaune : électricité disponible (par défaut, celles le long des murs). Cliquez une table pour ajouter ou retirer l\'électricité.',
   };
   $('#mode-hint').textContent = hints[ui.mode];
-  $('#toolbar-extra').innerHTML = ui.mode === 'layout' ? '<button class="btn small" data-act="add-table">+ Table</button>' : '';
+  $('#toolbar-extra').innerHTML = ui.mode === 'layout' ? `<button class="btn small" data-act="add-table">${ic('plus')} Table</button>` : '';
 }
 
 function renderLegend() {
@@ -599,7 +610,8 @@ function renderLegend() {
     <span><i class="lg-free"></i>Libre</span>
     <span><i class="lg-error"></i>Conflit</span>
     <span><i class="lg-power"></i>Électricité disponible</span>
-    <span>⚡ Besoin d'électricité</span>
+    <span>${ic('zap', 'i-sm')} Besoin d'électricité</span>
+    <span class="sep"></span>
     <span><i class="lg-clear"></i>Passage à dégager</span>
     ${items.join('')}`;
 }
@@ -614,14 +626,14 @@ function renderInspector() {
   box.hidden = false;
   const ex = exById(ev.assignments[t.id]);
   const issues = evaluation.issues.filter((i) => i.tables.includes(t.id) && i.type !== 'unplaced');
-  const head = `<div class="insp-head"><b>Table ${t.num}</b><span class="muted">${esc(regionLabel(regionAt(t.x, t.y)))}</span><button class="icon-btn" data-act="close-insp" title="Fermer">×</button></div>`;
+  const head = `<div class="insp-head"><b>Table ${t.num}</b><span class="muted">${esc(regionLabel(regionAt(t.x, t.y)))}</span><button class="icon-btn" data-act="close-insp" title="Fermer">${ic('x')}</button></div>`;
   const issuesHtml = issues.length ? `<ul class="mini-issues">${issues.map((i) => `<li class="sev-${i.severity}">${esc(i.msg)}</li>`).join('')}</ul>` : '';
   if (ui.mode === 'layout') {
     box.innerHTML = `${head}
       <div class="btn-row">
-        <button class="btn small" data-act="rotate">↻ Pivoter</button>
-        <button class="btn small" data-act="duplicate">⧉ Dupliquer</button>
-        <button class="btn small danger" data-act="delete-table">Supprimer</button>
+        <button class="btn small" data-act="rotate">${ic('rotate')} Pivoter</button>
+        <button class="btn small" data-act="duplicate">${ic('copy')} Dupliquer</button>
+        <button class="btn small danger" data-act="delete-table">${ic('trash')} Supprimer</button>
       </div>
       <div class="insp-grid">
         <label>N° <input type="number" min="1" data-tprop="num" value="${t.num}"></label>
@@ -641,10 +653,10 @@ function renderInspector() {
   const selEx = ui.selectedEx && ui.selectedEx !== ex?.id ? exById(ui.selectedEx) : null;
   const options = [...ev.exhibitors].sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((e) => {
     const nums = tableNums(e.id);
-    return `<option value="${e.id}" ${ex && ex.id === e.id ? 'selected' : ''}>${esc(e.name)}${e.electricity ? ' ⚡' : ''}${nums.length ? ` (table ${nums.join(', ')})` : ' — non placé'}</option>`;
+    return `<option value="${e.id}" ${ex && ex.id === e.id ? 'selected' : ''}>${esc(e.name)}${e.electricity ? ' (électricité)' : ''}${nums.length ? ` (table ${nums.join(', ')})` : ' — non placé'}</option>`;
   }).join('');
   box.innerHTML = `${head}
-    <div class="muted">${hasPower(t) ? '⚡ Électricité disponible' : 'Pas d\'électricité'}</div>
+    <div class="insp-power ${hasPower(t) ? 'on' : ''}">${ic('zap', 'i-sm')} ${hasPower(t) ? 'Électricité disponible' : 'Pas d\'électricité'}</div>
     ${ex ? `<div class="insp-ex"><span class="dot" style="background:${colorFor(ex)}"></span><b>${esc(ex.name)}</b>${ex.category ? `<span class="muted"> · ${esc(ex.category)}</span>` : ''}</div>` : '<div class="muted">Table libre</div>'}
     <label>Attribuer à
       <select data-act="assign-select"><option value="">— Libre —</option>${options}</select>
@@ -925,7 +937,7 @@ $('.tabs').addEventListener('click', (e) => {
 $('#btn-add-ex').onclick = () => openExhibitorDialog(null);
 $('#btn-place-missing').onclick = () => runOptimize('keep');
 $('#btn-optimize').onclick = () => {
-  if (confirm('Recalculer entièrement le plan ? Les exposants verrouillés 🔒 restent en place, les autres peuvent tous changer de table. (Annulable avec Ctrl+Z)')) runOptimize('fresh');
+  if (confirm('Recalculer entièrement le plan ? Les exposants verrouillés restent en place, les autres peuvent tous changer de table. (Annulable avec Ctrl+Z)')) runOptimize('fresh');
 };
 
 $('#tab-checks').addEventListener('click', (e) => {
@@ -1388,11 +1400,11 @@ function renderListStatus() {
   const ev = cur();
   let html;
   if (isLinked()) {
-    html = `🔗 Mise à jour automatique de <b>${esc(fileHandle.name)}</b>${info ? ` · dernière écriture le ${formatDateTime(info.at)}` : ''}. <button class="link" data-list="unlink">Arrêter</button>`;
+    html = `${ic('link')} Mise à jour automatique de <b>${esc(fileHandle.name)}</b>${info ? ` · dernière écriture le ${formatDateTime(info.at)}` : ''}. <button class="link" data-list="unlink">Arrêter</button>`;
   } else if (!ev.exhibitors.length) html = 'Aucun exposant pour l’instant.';
-  else if (!info) html = '⚠️ Cette liste n’a encore jamais été exportée.';
-  else if (listOutdated()) html = `⚠️ <b>La liste a changé</b> depuis le dernier export (${formatDateTime(info.at)}, ${esc(info.how)}). Pensez à la réexporter.`;
-  else html = `✓ Liste à jour : dernier export le ${formatDateTime(info.at)} (${esc(info.how)}).`;
+  else if (!info) html = `${ic('alert')} Cette liste n’a encore jamais été exportée.`;
+  else if (listOutdated()) html = `${ic('alert')} <span><b>La liste a changé</b> depuis le dernier export (${formatDateTime(info.at)}, ${esc(info.how)}). Pensez à la réexporter.</span>`;
+  else html = `${ic('check')} Liste à jour : dernier export le ${formatDateTime(info.at)} (${esc(info.how)}).`;
   const el = $('#list-status');
   el.innerHTML = html;
   el.className = 'list-status ' + (listOutdated() && !isLinked() ? 'outdated' : 'ok');
@@ -1413,12 +1425,12 @@ function renderList() {
     <thead><tr>${LIST_COLUMNS.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''} ${listUi.sort === c.key ? 'sorted' : ''}">${esc(c.label)}${listUi.sort === c.key ? (listUi.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead>
     <tbody>${exs.map((ex) => `<tr data-ex="${ex.id}">${LIST_COLUMNS.map((c) => {
       const v = c.get(ex);
-      if (c.key === 'electricity') return `<td>${ex.electricity ? '⚡ oui' : 'non'}</td>`;
+      if (c.key === 'electricity') return `<td>${ex.electricity ? `<span class="elec">${ic('zap', 'i-sm')}</span> oui` : '<span class="muted">non</span>'}</td>`;
       if (c.key === 'lastName') return `<td><span class="dot" style="background:${colorFor(ex)}"></span> <b>${esc(v)}</b></td>`;
       if (c.key === 'tablesNums') return `<td>${v ? esc(v) : '<span class="warn-text">non placé</span>'}</td>`;
       return `<td class="${c.num ? 'num' : ''}">${esc(v === 0 && c.key === 'grilles' ? '' : v)}</td>`;
     }).join('')}</tr>`).join('') || `<tr><td colspan="${LIST_COLUMNS.length}" class="muted">Aucun exposant.</td></tr>`}</tbody>
-    <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(ev.exhibitors.length, 'exposant')}</td><td class="num"><b>${totals.tables}</b></td><td class="num"><b>${totals.grilles}</b></td><td><b>${totals.elec}</b> ⚡</td><td class="num"><b>${totals.pay}</b> €</td><td colspan="${LIST_COLUMNS.length - 9}"></td></tr></tfoot>`;
+    <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(ev.exhibitors.length, 'exposant')}</td><td class="num"><b>${totals.tables}</b></td><td class="num"><b>${totals.grilles}</b></td><td><b>${totals.elec}</b> oui</td><td class="num"><b>${totals.pay}</b> €</td><td colspan="${LIST_COLUMNS.length - 9}"></td></tr></tfoot>`;
   renderListStatus();
 }
 
@@ -1680,7 +1692,7 @@ function renderPlanStatus() {
   $('#plans-badge').hidden = !unsaved;
   const pill = $('#plan-status');
   pill.className = 'plan-pill' + (unsaved ? ' unsaved' : '');
-  pill.textContent = p ? `Plan : ${p.name}${unsaved ? ' (modifié)' : ' ✓'}` : unsaved ? 'Plan non enregistré' : `${plural(ev.plans.length, 'plan enregistré', 'plans enregistrés')}`;
+  pill.textContent = p ? `Plan : ${p.name}${unsaved ? ' (modifié)' : ''}` : unsaved ? 'Plan non enregistré' : `${plural(ev.plans.length, 'plan enregistré', 'plans enregistrés')}`;
   pill.title = 'Voir les plans enregistrés';
 }
 $('#plan-status').onclick = () => { ui.tab = 'plans'; renderSidebar(); };
@@ -1690,7 +1702,7 @@ function renderPlans() {
   const act = activePlan(ev);
   const unsaved = isUnsaved(ev);
   const status = act
-    ? (unsaved ? `Basé sur « ${esc(act.name)} » — <b>modifié, non enregistré</b>` : `« ${esc(act.name)} » — enregistré ✓`)
+    ? (unsaved ? `Basé sur « ${esc(act.name)} » — <b>modifié, non enregistré</b>` : `« ${esc(act.name)} » — enregistré`)
     : (unsaved ? '<b>Plan en cours non enregistré</b>' : 'Rien de nouveau à enregistrer');
   const plans = [...ev.plans].sort((a, b) => b.savedAt - a.savedAt);
   $('#tab-plans').innerHTML = `
@@ -1716,7 +1728,7 @@ function renderPlans() {
             <button class="btn small primary" data-act="plan-open" data-id="${p.id}">Ouvrir</button>
             <button class="btn small" data-act="plan-export" data-id="${p.id}">Exporter</button>
             <button class="btn small" data-act="plan-rename" data-id="${p.id}">Renommer</button>
-            <button class="btn small danger" data-act="plan-delete" data-id="${p.id}" title="Supprimer">🗑</button>
+            <button class="btn small danger" data-act="plan-delete" data-id="${p.id}" title="Supprimer">${ic('trash')}</button>
           </div>
         </div>
       </li>`;
@@ -1863,8 +1875,8 @@ $('#btn-print').onclick = () => {
     <div class="print-page">
       <h2>Liste des exposants</h2>
       <table class="print-table">
-        <thead><tr><th>Table(s)</th><th>Exposant</th><th>Objets vendus</th><th>Grilles</th><th>⚡</th><th>Téléphone</th><th>Règl.</th><th>Notes</th></tr></thead>
-        <tbody>${list.map((ex) => `<tr><td>${tableNums(ex.id).join(', ') || '—'}</td><td>${esc(ex.name)}</td><td>${esc(ex.products || ex.category)}</td><td>${ex.grilles || ''}</td><td>${ex.electricity ? '⚡' : ''}</td><td>${esc(ex.phone)}</td><td>${ex.payment ? esc(ex.payment) + ' €' : ''}</td><td>${esc(ex.notes)}</td></tr>`).join('')}</tbody>
+        <thead><tr><th>Table(s)</th><th>Exposant</th><th>Objets vendus</th><th>Grilles</th><th>Élec.</th><th>Téléphone</th><th>Règl.</th><th>Notes</th></tr></thead>
+        <tbody>${list.map((ex) => `<tr><td>${tableNums(ex.id).join(', ') || '—'}</td><td>${esc(ex.name)}</td><td>${esc(ex.products || ex.category)}</td><td>${ex.grilles || ''}</td><td>${ex.electricity ? 'oui' : ''}</td><td>${esc(ex.phone)}</td><td>${ex.payment ? esc(ex.payment) + ' €' : ''}</td><td>${esc(ex.notes)}</td></tr>`).join('')}</tbody>
       </table>
     </div>`;
   window.print();
@@ -1884,7 +1896,8 @@ function toast(message, kind = 'info', action = null) {
   }
   const close = document.createElement('button');
   close.className = 'close';
-  close.textContent = '×';
+  close.innerHTML = ic('x');
+  close.title = 'Fermer';
   close.onclick = () => el.remove();
   el.appendChild(close);
   $('#toasts').appendChild(el);
@@ -1937,7 +1950,7 @@ $('#btn-install').onclick = async () => {
     return;
   }
   $('#install-steps').innerHTML = isIOS
-    ? `<ol><li>Ouvrez cette page dans <b>Safari</b>.</li><li>Touchez le bouton <b>Partager</b> <span class="kbd">⬆︎</span> (en bas sur iPhone, en haut sur iPad).</li><li>Choisissez <b>« Sur l'écran d'accueil »</b>, puis <b>Ajouter</b>.</li></ol>`
+    ? `<ol><li>Ouvrez cette page dans <b>Safari</b>.</li><li>Touchez le bouton <b>Partager</b> <span class="kbd">${ic('share', 'i-sm')}</span> (en bas sur iPhone, en haut sur iPad).</li><li>Choisissez <b>« Sur l'écran d'accueil »</b>, puis <b>Ajouter</b>.</li></ol>`
     : `<ol><li>Ouvrez le menu du navigateur <span class="kbd">⋮</span>.</li><li>Choisissez <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.</li></ol>`;
   $('#install-dialog').showModal();
 };
