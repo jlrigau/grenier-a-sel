@@ -37,9 +37,12 @@ n'est envoyée en ligne : tout reste sur l'appareil.
 - **Électricité** : seules les tables le long des murs de la grande salle y ont
   accès (pas l'îlot central, ni la scène et ses abords, ni le hall). Le mode
   « Électricité ⚡ » montre ces tables et permet d'ajouter des exceptions.
-- **Versions enregistrées** (onglet « Versions ») : enregistrer plusieurs versions d'un
-  plan, les rouvrir, les comparer en vignette, les exporter en .json et les
-  réimporter plus tard ; export en image PNG via *Données → Image du plan*.
+- **Versions enregistrées** (onglet « Versions ») : enregistrer la disposition des
+  tables et la place de chaque exposant sous un nom, pour comparer plusieurs options
+  ou revenir en arrière. La liste des exposants reste toujours à jour : en ouvrant
+  une version, les exposants inscrits depuis apparaissent « à placer ». Les versions
+  s'exportent en .json et se réimportent (sur un autre appareil, la version importée
+  rapporte aussi ses exposants) ; export en image PNG via *Données → Image du plan*.
 - Plusieurs **événements**, annuler/rétablir (Ctrl+Z / Ctrl+Y), **impression**
   (plan + liste des exposants), export **CSV**, export/import **JSON**.
 

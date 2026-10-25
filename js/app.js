@@ -1744,7 +1744,11 @@ async function importFile(file) {
 
 const PLAN_FIELDS = ['tables', 'exhibitors', 'assignments', 'settings', 'categoryColors'];
 const planData = (ev) => structuredClone(Object.fromEntries(PLAN_FIELDS.map((f) => [f, ev[f]])));
-const samePlan = (ev, plan) => JSON.stringify(planData(ev)) === JSON.stringify(plan.data);
+// Une version sert à retrouver une disposition : tables, places et réglages.
+// La liste des exposants, elle, reste toujours celle de l'événement (elle est
+// aussi copiée dans la version pour sa miniature et pour l'import sur un autre appareil).
+const layoutKey = (d) => JSON.stringify([d.tables, d.assignments, d.settings]);
+const samePlan = (ev, plan) => layoutKey(ev) === layoutKey(plan.data);
 const activePlan = (ev = cur()) => ev.plans.find((p) => p.id === ev.activePlanId) || null;
 
 function isUnsaved(ev = cur()) {
@@ -1831,8 +1835,10 @@ function renderPlans() {
       <button class="btn" data-act="plan-import">Importer des plans (.json)…</button>
       ${plans.length ? '<button class="btn" data-act="plan-export-all">Exporter tous les plans</button>' : ''}
     </div>
-    <p class="muted">Un plan enregistré conserve les tables, les exposants et leurs places.
-      Exportez-le en fichier .json pour le garder ou l'envoyer, puis réimportez-le ici pour le revoir ou le reprendre.
+    <p class="muted">Une version garde la disposition des tables et la place de chaque exposant.
+      La liste des exposants, elle, reste toujours à jour : en ouvrant une version, les exposants inscrits depuis
+      apparaissent « à placer ».
+      Exportez une version en fichier .json pour la garder ou l'envoyer, puis réimportez-la ici pour la revoir ou la reprendre.
       « Données → Image du plan » donne une image à partager.</p>`;
 }
 
@@ -1866,8 +1872,33 @@ function openPlan(id) {
   if (ev.activePlanId === id && !isUnsaved(ev)) { toast(`« ${p.name} » est déjà ouvert`, 'info'); return; }
   if (isUnsaved(ev) && !confirm(`Le plan en cours contient des modifications non enregistrées.\nOuvrir « ${p.name} » quand même ?\n(Vous pourrez revenir en arrière avec Ctrl+Z)`)) return;
   ui.selectedEx = null; ui.selectedTable = null;
-  commit((ev) => { Object.assign(ev, structuredClone(p.data)); ev.activePlanId = id; });
-  toast(`Plan « ${p.name} » ouvert`, 'success', { label: 'Annuler', fn: undo });
+  const data = structuredClone(p.data);
+  const current = new Set(ev.exhibitors.map((e) => e.id));
+  // Version venue d'ailleurs (import) sans aucun exposant en commun : on reprend aussi ses exposants.
+  const foreign = data.exhibitors.length > 0 && !data.exhibitors.some((e) => current.has(e.id));
+  let gone = 0;
+  commit((ev) => {
+    if (foreign) {
+      ev.exhibitors.push(...data.exhibitors);
+      data.exhibitors.forEach((e) => current.add(e.id));
+    }
+    ev.tables = data.tables;
+    ev.settings = { ...ev.settings, ...data.settings };
+    ev.categoryColors = { ...data.categoryColors, ...ev.categoryColors };
+    const tableIds = new Set(ev.tables.map((t) => t.id));
+    ev.assignments = {};
+    for (const [tid, eid] of Object.entries(data.assignments)) {
+      if (!tableIds.has(tid)) continue;
+      if (current.has(eid)) ev.assignments[tid] = eid; else gone++;
+    }
+    ev.activePlanId = id;
+  });
+  const placed = new Set(Object.values(cur().assignments));
+  const toPlace = cur().exhibitors.filter((e) => !placed.has(e.id)).length;
+  const parts = [`Version « ${p.name} » ouverte`];
+  if (toPlace) parts.push(`${plural(toPlace, 'exposant', 'exposants')} à placer`);
+  if (gone) parts.push(`${plural(gone, 'table libérée', 'tables libérées')} (exposants supprimés depuis)`);
+  toast(parts.join(' · '), toPlace ? 'warning' : 'success', toPlace ? { label: 'Placer', fn: () => runOptimize('keep') } : { label: 'Annuler', fn: undo });
 }
 
 $('#tab-plans').addEventListener('submit', (e) => {
