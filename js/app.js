@@ -2109,6 +2109,29 @@ $('#btn-install').onclick = async () => {
 };
 $('#install-close').onclick = () => $('#install-dialog').close();
 
+// ---------- Clavier du téléphone ----------
+// Quand le clavier est ouvert : la barre d'onglets se masque et les fenêtres se calent sur la partie
+// visible de l'écran (au-dessus du clavier), boutons compris. visualViewport donne cette zone visible.
+(function keyboardAware() {
+  const root = document.documentElement;
+  const isField = (el) => el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
+    || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'file', 'range', 'color'].includes(el.type)));
+  const vv = window.visualViewport;
+  const update = () => {
+    const typing = touchScreen() && isField(document.activeElement);
+    const shrunk = vv ? window.innerHeight - vv.height > 120 : false;
+    root.classList.toggle('kbd-open', typing || (touchScreen() && shrunk));
+    if (vv) {
+      root.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
+      root.style.setProperty('--vvtop', `${Math.round(vv.offsetTop)}px`);
+    }
+  };
+  document.addEventListener('focusin', update);
+  document.addEventListener('focusout', () => setTimeout(update, 60));
+  if (vv) { vv.addEventListener('resize', update); vv.addEventListener('scroll', update); }
+  update();
+})();
+
 // ---------- Fenêtres : fermeture facile ----------
 // Chaque fenêtre se ferme par sa croix, en touchant à côté, avec Échap ou avec le « retour »
 // du téléphone (Android, ou geste retour) : on passe par son bouton d'annulation habituel.

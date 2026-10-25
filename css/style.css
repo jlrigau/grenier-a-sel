@@ -628,6 +628,20 @@ dialog.full[open] { display: flex; }
 }
 @keyframes sheet { from { transform: translateY(40px); opacity: .4; } }
 
+/* Clavier ouvert (téléphone) : barre d'onglets masquée, fenêtre calée au-dessus du clavier. */
+@media (max-width: 900px) {
+  :root.kbd-open .tabbar, :root.kbd-open #toasts { display: none; }
+  :root.kbd-open dialog[open] {
+    position: fixed; inset: var(--vvtop, 0px) 0 auto 0; margin: 0; width: 100vw;
+    max-height: var(--vvh, 100dvh); border-radius: 0; animation: none;
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+  :root.kbd-open dialog.full[open] { height: var(--vvh, 100dvh); }
+  :root.kbd-open .dialog-actions { padding: 8px 16px; margin-top: 10px; flex-wrap: nowrap; gap: 6px; }
+  :root.kbd-open .dialog-actions .btn { height: 38px; padding: 0 10px; font-size: 14px; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  :root.kbd-open #ex-cancel, :root.kbd-open #ex-delete, :root.kbd-open #fiche-cancel, :root.kbd-open #event-cancel, :root.kbd-open #fiche-skip { display: none; }
+}
+
 /* Croix de fermeture des fenêtres (toujours visible en haut) */
 .sheet-close {
   position: sticky; top: 0; float: right; z-index: 3; margin: -6px -6px 0 8px; width: 38px; height: 38px; border-radius: 50%;
