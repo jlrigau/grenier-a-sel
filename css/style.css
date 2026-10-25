@@ -717,3 +717,8 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 .diag summary { cursor: pointer; }
 .diag pre { white-space: pre-wrap; font-size: 11px; margin: 6px 0 0; }
 :root.standalone body { min-height: 100vh; }
+
+/* Extrait de la fiche au-dessus de chaque champ : on recopie l'écriture sans zoomer sur la photo. */
+.f-crop { display: block; width: 100%; max-height: 120px; object-fit: contain; object-position: left center; background: #fff; border: 1px solid var(--line, #e8dfcf); border-radius: 10px; margin: 6px 0; cursor: zoom-in; }
+.f-crop.zoomed { max-height: none; cursor: zoom-out; }
+.fiche-fields input::placeholder { color: #a39a8a; font-style: italic; }
