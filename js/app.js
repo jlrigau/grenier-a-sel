@@ -2141,8 +2141,25 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 // reste crème pour que le bas de la page ne change pas.
 (function greenOverscroll() {
   const root = document.documentElement;
-  const update = () => root.classList.toggle('at-top', window.scrollY < 120);
-  window.addEventListener('scroll', update, { passive: true });
+  const topbar = $('.topbar');
+  let frame = 0;
+  // Si l'en-tête est descendu (page tirée vers le bas, ou page laissée décalée par iOS après
+  // le clavier), la bande verte fixe du haut s'allonge jusqu'à lui : plus de vide crème.
+  const update = () => {
+    frame = 0;
+    root.classList.toggle('at-top', window.scrollY < 120);
+    const gap = Math.max(0, Math.round(topbar.getBoundingClientRect().top));
+    root.style.setProperty('--pull', `${gap}px`);
+  };
+  const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('touchmove', schedule, { passive: true });
+  window.addEventListener('touchend', () => setTimeout(schedule, 50), { passive: true });
+  window.addEventListener('resize', schedule);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', schedule);
+    window.visualViewport.addEventListener('scroll', schedule);
+  }
   update();
 })();
 
