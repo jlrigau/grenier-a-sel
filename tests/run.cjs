@@ -214,6 +214,16 @@ test('titres des pages de la même taille que « Plan de la salle »', async () 
   assert.equal(await size('.page-head h1'), ref);
   await click(p, '#tabbar [data-nav=list]');
   assert.equal(await size('#tab-list .list-head h2'), ref);
+  // même espace sous le titre sur toutes les pages
+  const gap = () => p.evaluate(() => {
+    const title = document.querySelector('#page-head h1') || document.querySelector('#tab-list .list-head h2');
+    const panel = [...document.querySelectorAll('.tab-panel')].find((x) => !x.hidden);
+    const first = panel.id === 'tab-list' ? document.querySelector('#list-search') : panel.firstElementChild;
+    return Math.round(first.getBoundingClientRect().top - title.getBoundingClientRect().bottom);
+  });
+  const gaps = {};
+  for (const nav of ['list', 'plans', 'settings']) { await click(p, `#tabbar [data-nav=${nav}]`); gaps[nav] = await gap(); }
+  assert.ok(new Set(Object.values(gaps)).size === 1, `espaces différents sous les titres : ${JSON.stringify(gaps)}`);
   await done(p);
 });
 

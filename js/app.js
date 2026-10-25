@@ -2402,7 +2402,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v48';
+const APP_VERSION = 'v49';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------

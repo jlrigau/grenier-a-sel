@@ -957,3 +957,8 @@ details.advanced > summary { cursor: pointer; font-weight: 700; color: var(--ink
   /* Clavier ouvert : l'en-tête suit la page (une barre fixe se placerait mal au-dessus du clavier sur iPhone) */
   :root.green-head.kbd-open .topbar { position: absolute; }
 }
+/* Pages dédiées : même espace sous le titre partout (comme sur la Liste) */
+@media (max-width: 900px) {
+  :root.sub-page .page-head { margin-bottom: 0; }
+  :root.sub-page .tab-panel > :first-child { margin-top: 0; }
+}
