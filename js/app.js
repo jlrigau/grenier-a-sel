@@ -655,7 +655,7 @@ function renderMap() {
   svg.dataset.mode = ui.mode;
   $$('#mode-switch button').forEach((b) => b.classList.toggle('active', b.dataset.mode === ui.mode));
   const hints = {
-    place: 'Glissez un exposant de la liste sur une table · glissez une table occupée vers une autre pour déplacer ou échanger (Maj = ajouter une table) · cliquez une table pour l\'attribuer',
+    place: isPhone() ? 'Touchez une table pour l\'attribuer · glissez une table occupée vers une autre · deux doigts pour zoomer et déplacer le plan' : 'Glissez un exposant de la liste sur une table · glissez une table occupée vers une autre pour déplacer ou échanger (Maj = ajouter une table) · cliquez une table pour l\'attribuer',
     layout: 'Glissez les tables pour les déplacer · R : pivoter · Suppr : supprimer · flèches : ajuster · Ctrl+D : dupliquer',
     power: 'Tables en jaune : électricité disponible (par défaut, celles le long des murs). Cliquez une table pour ajouter ou retirer l\'électricité.',
   };
@@ -822,6 +822,13 @@ function highlightDrop(x, y) {
   if (target) target.classList.add('drop-target');
 }
 
+// Écran tactile : un doigt sur le fond du plan fait défiler la page (touch-action: pan-y) ;
+// un doigt sur une table la déplace, deux doigts zooment et déplacent le plan.
+svg.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 1 || e.target.closest('[data-table]')) e.preventDefault();
+}, { passive: false });
+svg.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
 svg.addEventListener('pointerdown', (e) => {
   if (e.button !== undefined && e.button > 1) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -844,7 +851,7 @@ svg.addEventListener('pointerdown', (e) => {
   } else if (ui.mode === 'place' && tEl && e.button !== 1) {
     drag = { type: 'assign', tableId: tEl.dataset.table, exId: ev.assignments[tEl.dataset.table], start, orig: { tx: ui.view.tx, ty: ui.view.ty }, moved: false };
   } else {
-    drag = { type: 'pan', start, orig: { tx: ui.view.tx, ty: ui.view.ty }, moved: false };
+    drag = { type: 'pan', start, orig: { tx: ui.view.tx, ty: ui.view.ty }, moved: false, touch: e.pointerType === 'touch' };
   }
 });
 
@@ -865,6 +872,7 @@ svg.addEventListener('pointermove', (e) => {
   const dx = e.clientX - drag.start.cx, dy = e.clientY - drag.start.cy;
   if (!drag.moved && Math.hypot(dx, dy) < 4) return;
   drag.moved = true;
+  if (drag.touch && isPhone()) return; // un doigt sur le fond : c'est la page qui défile
   if (drag.type === 'pan' || drag.type === 'power' || (drag.type === 'assign' && !drag.exId)) {
     ui.view.tx = drag.orig.tx + dx;
     ui.view.ty = drag.orig.ty + dy;
