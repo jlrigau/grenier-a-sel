@@ -2164,7 +2164,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v27';
+const APP_VERSION = 'v28';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;
@@ -2183,46 +2183,6 @@ setInterval(() => {
   const fmt = (o) => Object.entries(o).map(([k, v]) => `${k} ${v}`).join(' · ');
   box.textContent = `Version ${APP_VERSION} · ${standalone() ? 'app installée' : 'navigateur'}\nMaintenant : ${fmt(screenInfo())}\nDernier décalage vu : ${diag.gap ? fmt(diag.gap) : 'aucun'}`;
 }, 500);
-
-// ---------- Barre compacte (app installée sur téléphone) ----------
-// Quand on fait défiler, l'en-tête complet sort de l'écran : une barre compacte avec le logo,
-// le nom et les mêmes boutons prend le relais. Ses boutons déclenchent ceux de l'en-tête.
-(function miniBar() {
-  const bar = $('#mini-bar');
-  const topbar = $('.topbar');
-  const ids = ['btn-undo', 'btn-redo', 'btn-data-menu', 'btn-print', 'btn-list'];
-  bar.innerHTML = `<div class="mini-brand">${$('.brand .logo', topbar).outerHTML}<b>Grenier <em>à sel</em></b></div>
-    <div class="mini-actions">${ids.map((id) => {
-      const real = $('#' + id);
-      const icon = [...real.querySelectorAll('svg')].map((x) => x.outerHTML).join('');
-      return `<button class="mini-btn ${id === 'btn-list' ? 'accent' : ''}" data-proxy="${id}" title="${esc(real.title || real.textContent.trim())}" tabindex="-1">${icon}${id === 'btn-list' ? '<span class="mini-badge" hidden>!</span>' : ''}</button>`;
-    }).join('')}</div>`;
-  bar.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-proxy]');
-    if (!b) return;
-    e.stopPropagation();
-    $('#' + b.dataset.proxy).click();
-  });
-  const sync = () => {
-    ids.forEach((id) => { $(`[data-proxy="${id}"]`, bar).disabled = $('#' + id).disabled; });
-    $('.mini-badge', bar).hidden = $('#list-badge').hidden;
-  };
-  const mo = new MutationObserver(sync);
-  ids.forEach((id) => mo.observe($('#' + id), { attributes: true, attributeFilter: ['disabled'] }));
-  mo.observe($('#list-badge'), { attributes: true, attributeFilter: ['hidden'] });
-  sync();
-  let frame = 0;
-  const update = () => {
-    frame = 0;
-    const r = topbar.getBoundingClientRect();
-    const show = r.bottom < bar.offsetHeight * 0.6;
-    bar.classList.toggle('show', show);
-    bar.setAttribute('aria-hidden', String(!show));
-  };
-  window.addEventListener('scroll', () => { if (!frame) frame = requestAnimationFrame(update); }, { passive: true });
-  window.addEventListener('resize', update);
-  update();
-})();
 
 // ---------- Fenêtres : fermeture facile ----------
 // Chaque fenêtre se ferme par sa croix, en touchant à côté, avec Échap ou avec le « retour »
