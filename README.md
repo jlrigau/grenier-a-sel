@@ -37,7 +37,7 @@ n'est envoyée en ligne : tout reste sur l'appareil.
 - **Électricité** : seules les tables le long des murs de la grande salle y ont
   accès (pas l'îlot central, ni la scène et ses abords, ni le hall). Le mode
   « Électricité ⚡ » montre ces tables et permet d'ajouter des exceptions.
-- **Plans enregistrés** (onglet « Plans ») : enregistrer plusieurs versions d'un
+- **Versions enregistrées** (onglet « Versions ») : enregistrer plusieurs versions d'un
   plan, les rouvrir, les comparer en vignette, les exporter en .json et les
   réimporter plus tard ; export en image PNG via *Données → Image du plan*.
 - Plusieurs **événements**, annuler/rétablir (Ctrl+Z / Ctrl+Y), **impression**
@@ -102,9 +102,11 @@ aucun nom de personne, téléphone ou e-mail. Il peut être supprimé dans
 
 ## Design
 
-Six directions de design au choix (Réglages → Apparence, ou `?theme=clair`, `atlantique`, `marche`, `nuit`, `papier` dans l'adresse), définies dans `css/themes.css` ; polices fournies dans `vendor/fonts` (licence OFL), logo `icons/logo.svg` (halle à pignon et cristal de sel), icônes vectorielles
-intégrées (`index.html`, symboles `#i-*`), jetons de couleur et d'espacement
-dans `css/style.css` (`:root`).
+Direction « Marché » : vert sapin, moutarde et crème, cartes arrondies et
+pastilles, police Outfit (fournie dans `vendor/fonts`, licence OFL), icônes
+vectorielles intégrées (`index.html`, symboles `#i-*`). Logo : un étal de marché
+à auvent rayé avec un cristal de sel (`icons/logo.svg`). Les couleurs et
+arrondis sont définis comme variables en tête de `css/style.css`.
 
 ## Structure
 

@@ -5,15 +5,16 @@ import { buildXlsx } from './xlsx.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
 const NOTICE_KEY = 'grenier-a-sel/notice-dismissed';
-const PALETTE = ['#b9d3e8', '#f7d98a', '#c4dfb0', '#f5b9ad', '#d9c8ec', '#a8d8cc', '#f5c8dc', '#e8cba4', '#c3c9ec', '#dbe6a3', '#b3dbe9', '#e6ddd2', '#f2c3b0', '#cfe3d6'];
+const PALETTE = ['#ffd97a', '#a9d3f5', '#b6e6c6', '#f7a8a0', '#d7c2f5', '#a5e3da', '#f8bfd7', '#ffb38a', '#cfe89a', '#b9c4f3', '#e3d8c8', '#ffe08f', '#c6e2f0', '#f3c9a5'];
 // Palettes des versions précédentes : converties à l'ouverture d'un événement.
 const OLD_PALETTES = [
+  ['#b9d3e8', '#f7d98a', '#c4dfb0', '#f5b9ad', '#d9c8ec', '#a8d8cc', '#f5c8dc', '#e8cba4', '#c3c9ec', '#dbe6a3', '#b3dbe9', '#e6ddd2', '#f2c3b0', '#cfe3d6'],
   ['#8ecae6', '#f6bd60', '#90be6d', '#f28482', '#cdb4db', '#84a59d', '#ffafcc', '#d4a373', '#f9e07f', '#9fa8da', '#a8e6cf', '#ffab91', '#b0bec5', '#c5d86d'],
   ['#b2ccff', '#fedf89', '#a6f4c5', '#fecdca', '#d9d6fe', '#99f6e0', '#fcceee', '#fddcab', '#c7d7fe', '#d0f8ab', '#b9e6fe', '#e4e7ec', '#fecdd6', '#d6bbfb'],
 ];
 const migrateColor = (c) => { for (const old of OLD_PALETTES) if (old.includes(c)) return PALETTE[old.indexOf(c)]; return c; };
 const ic = (name, cls = '') => `<svg class="i${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const NO_CATEGORY_COLOR = '#ece4d9';
+const NO_CATEGORY_COLOR = '#ece6da';
 const SNAP = 0.05;
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -178,6 +179,13 @@ function colorFor(ex, ev = cur()) {
   return (key && ev.categoryColors[key]) || NO_CATEGORY_COLOR;
 }
 
+// Initiales pour l'avatar d'un exposant (« Chocolaterie Martin » → « CM »).
+function initials(name) {
+  const words = (name || '?').replace(/[&()·'’-]/g, ' ').split(/\s+/).filter(Boolean);
+  const main = words.filter((w) => w.length > 2 || /^[A-ZÀ-Ý]/.test(w));
+  return ((main[0] || words[0] || '?')[0] + ((main[1] || '')[0] || '')).toUpperCase();
+}
+
 const exById = (id, ev = cur()) => ev.exhibitors.find((e) => e.id === id);
 const tableById = (id, ev = cur()) => ev.tables.find((t) => t.id === id);
 const tablesOf = (exId, ev = cur()) => ev.tables.filter((t) => ev.assignments[t.id] === exId);
@@ -309,15 +317,58 @@ function renderHeader() {
   const sel = $('#event-select');
   sel.innerHTML = [...db.events]
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.name.localeCompare(b.name))
-    .map((e) => `<option value="${e.id}" ${e.id === ev.id ? 'selected' : ''}>${esc(e.name)}${e.date ? ' — ' + formatDate(e.date) : ''}</option>`)
+    .map((e) => `<option value="${e.id}" ${e.id === ev.id ? 'selected' : ''}>${esc(e.name)}</option>`)
     .join('');
+  $('#event-date').textContent = ev.date ? formatLongDate(ev.date) : 'Date à préciser';
+  $('#event-date').classList.toggle('empty', !ev.date);
   $('#btn-undo').disabled = !undoStack.length;
   $('#btn-redo').disabled = !redoStack.length;
+}
+
+function formatLongDate(d) {
+  const date = new Date(d + 'T12:00:00');
+  if (Number.isNaN(date.getTime())) return d;
+  const txt = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
 }
 
 function formatDate(d) {
   const [y, m, day] = d.split('-');
   return y && m && day ? `${day}/${m}/${y}` : d;
+}
+
+// ---------- Chiffres clés ----------
+
+function renderStats() {
+  const ev = cur();
+  const placed = ev.exhibitors.filter((e) => evaluation.exTables.has(e.id)).length;
+  const used = Object.keys(ev.assignments).filter((t) => tableById(t)).length;
+  const usable = ev.tables.filter((t) => !t.blocked).length;
+  const elec = ev.exhibitors.filter((e) => e.electricity).length;
+  const todo = evaluation.issues.filter((i) => i.severity === 'error' || i.severity === 'warning').length;
+  const card = (cls, icon, value, label, act) => `<button class="stat ${cls}" ${act ? `data-stat="${act}"` : ''}><span class="stat-ic">${ic(icon)}</span><span><b>${value}</b><span>${label}</span></span></button>`;
+  $('#stats-row').innerHTML = [
+    card('green', 'users', `${placed}/${ev.exhibitors.length}`, 'exposants placés', 'unplaced'),
+    card('sky', 'table2', `${used}/${usable}`, 'tables occupées', ''),
+    card('mustard', 'zap', elec, `besoin${elec > 1 ? 's' : ''} d'électricité`, 'power'),
+    card(todo ? 'coral' : 'ok', todo ? 'alert' : 'check', todo, todo > 1 ? 'points à régler' : todo ? 'point à régler' : 'tout est en ordre', 'checks'),
+  ].join('');
+}
+
+function renderNav() {
+  const map = { exhibitors: 'plan', checks: 'plan', plans: 'plans', settings: 'settings' };
+  $$('#main-nav [data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === map[ui.tab]));
+}
+
+function renderTopAlert() {
+  const box = $('#top-alert');
+  const err = evaluation.issues.find((i) => i.severity === 'error');
+  const unplaced = cur().exhibitors.filter((e) => !evaluation.exTables.has(e.id)).length;
+  if (err) {
+    box.innerHTML = `<div class="alert coral">${ic('alert')}<span>${esc(err.msg)}</span><button class="pill tiny coral" data-alert="fix">Corriger</button></div>`;
+  } else if (unplaced) {
+    box.innerHTML = `<div class="alert mustard">${ic('clock')}<span>${plural(unplaced, 'exposant')} à placer</span><button class="pill tiny mustard" data-alert="fix">Placer</button></div>`;
+  } else box.innerHTML = '';
 }
 
 // ---------- Barre latérale ----------
@@ -336,6 +387,9 @@ function renderSidebar() {
   if (ui.tab === 'settings') renderSettings();
   renderPlanStatus();
   renderListBadge();
+  renderStats();
+  renderNav();
+  renderTopAlert();
 }
 
 function exStatus(ex) {
@@ -409,13 +463,12 @@ function renderExhibitors() {
       </div>`;
     }
     return `<li class="ex-item ${selected ? 'selected' : ''} ${st.placed ? '' : 'unplaced'}" data-ex="${ex.id}">
-      <span class="handle" data-drag="${ex.id}" title="Glisser sur une table du plan">${ic('grip')}</span>
-      <span class="dot" style="background:${colorFor(ex)}"></span>
+      <span class="avatar handle" data-drag="${ex.id}" style="background:${colorFor(ex)}" title="Glisser sur une table du plan">${esc(initials(ex.name))}</span>
       <div class="ex-main">
-        <div class="ex-name">${esc(ex.name)}</div>
-        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.grilles ? ` · ${plural(ex.grilles, 'grille')}` : ''}${ex.electricity ? ` · <span class="elec" title="Besoin d'électricité">${ic('zap', 'i-sm')}</span>` : ''}${ex.locked ? ` · <span title="Verrouillé">${ic('lock', 'i-sm')}</span>` : ''}</div>
-        <div class="ex-where">${nums.length ? 'Table' + (nums.length > 1 ? 's' : '') + ' ' + nums.join(', ') : 'Non placé'}</div>
+        <div class="ex-name">${esc(ex.name)}${ex.electricity ? ` <span class="elec" title="Besoin d'électricité">${ic('zap', 'i-sm')}</span>` : ''}${ex.locked ? ` <span class="muted" title="Verrouillé">${ic('lock', 'i-sm')}</span>` : ''}</div>
+        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.grilles ? ` · ${plural(ex.grilles, 'grille')}` : ''}</div>
       </div>
+      <span class="where ${nums.length ? '' : 'todo'} st-${st.worst}">${nums.length ? (nums.length > 1 ? 'Tables ' : 'Table ') + nums.join(' + ') : 'À placer'}</span>
       ${icon}
       <button class="icon-btn" data-edit="${ex.id}" title="Modifier">${ic('pen')}</button>
       ${detail}
@@ -437,10 +490,10 @@ function renderChecks() {
   }).join('')}</ul>` : '';
   $('#tab-checks').innerHTML = `
     <div class="summary">
-      <div class="card"><b>${placed}/${ev.exhibitors.length}</b><span>exposants placés</span></div>
-      <div class="card"><b>${used}/${ev.tables.length}</b><span>tables attribuées</span></div>
-      <div class="card ${errors.length ? 'bad' : 'good'}"><b>${errors.length}</b><span>${errors.length > 1 ? 'conflits' : 'conflit'}</span></div>
-      <div class="card"><b>${elecNeeds}</b><span>besoin${elecNeeds > 1 ? 's' : ''} électrique${elecNeeds > 1 ? 's' : ''}</span></div>
+      <div class="kcard"><b>${placed}/${ev.exhibitors.length}</b><span>exposants placés</span></div>
+      <div class="kcard"><b>${used}/${ev.tables.length}</b><span>tables attribuées</span></div>
+      <div class="kcard ${errors.length ? 'bad' : 'good'}"><b>${errors.length}</b><span>${errors.length > 1 ? 'conflits' : 'conflit'}</span></div>
+      <div class="kcard"><b>${elecNeeds}</b><span>besoin${elecNeeds > 1 ? 's' : ''} électrique${elecNeeds > 1 ? 's' : ''}</span></div>
     </div>
     ${!evaluation.issues.length ? `<p class="all-good">${ic('check')} Toutes les contraintes sont respectées.</p>` : ''}
     ${section('Conflits à corriger', errors, 'h-error')}
@@ -450,35 +503,10 @@ function renderChecks() {
   `;
 }
 
-// Directions de design proposées (voir css/themes.css).
-const THEMES = [
-  { id: 'sel', name: 'Sel et brique', desc: 'Chaleureux, terre cuite et sable', colors: ['#faf6f1', '#c2512b', '#ffffff', '#eab59e', '#2b211c'] },
-  { id: 'clair', name: 'Clair', desc: 'Sobre et professionnel', colors: ['#f5f6f8', '#2453c4', '#ffffff', '#b9cbf3', '#101828'] },
-  { id: 'atlantique', name: 'Atlantique', desc: 'Bleu marine et sable, arrondi', colors: ['#f2f5f7', '#0f2537', '#1d5f8a', '#e9c46a', '#ffffff'] },
-  { id: 'marche', name: 'Marché', desc: 'Vert sapin et moutarde, convivial', colors: ['#f5f4ee', '#2f6b4f', '#ffffff', '#f2c14e', '#1f2a24'] },
-  { id: 'nuit', name: 'Nuit', desc: 'Mode sombre moderne', colors: ['#0e1116', '#8b7cf6', '#161a21', '#c4bbfb', '#e8eaf0'] },
-  { id: 'papier', name: 'Papier', desc: 'Éditorial, façon plan d\'architecte', colors: ['#f2eee5', '#1b1a17', '#fbf9f4', '#c8372d', '#c9bfac'] },
-];
-const currentTheme = () => document.documentElement.dataset.theme || 'sel';
-
-function setTheme(id) {
-  if (id === 'sel') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = id;
-  try { localStorage.setItem('grenier-a-sel/theme', id); } catch { /* ignore */ }
-  const meta = document.querySelector('meta[name=theme-color]');
-  if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#c2512b';
-  refresh();
-}
-
 function renderSettings() {
   const ev = cur();
   const s = ev.settings;
   $('#tab-settings').innerHTML = `
-    <h3>Apparence</h3>
-    <div class="theme-grid">${THEMES.map((t) => `<button class="theme-card ${currentTheme() === t.id ? 'active' : ''}" data-theme-id="${t.id}">
-      <span class="theme-swatch">${t.colors.map((c) => `<span style="background:${c}"></span>`).join('')}</span>
-      <b>${esc(t.name)}</b><small>${esc(t.desc)}</small></button>`).join('')}</div>
-
     <h3>Événement</h3>
     <label>Nom <input data-ev="name" value="${esc(ev.name)}" maxlength="80"></label>
     <label>Date <input type="date" data-ev="date" value="${esc(ev.date)}"></label>
@@ -610,8 +638,9 @@ function tablesSVG(ev, { print = false } = {}) {
       return `<use href="#i-${b}" class="t-icon ${b}" x="${bx}" y="${by}" width="${S}" height="${S}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
     }).join('');
     return `<g class="${cls.join(' ')}" data-table="${t.id}" transform="translate(${t.x} ${t.y})">
-      <rect class="t-body" x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="0.04" fill="${fill}"/>
-      <text class="tnum" x="${-w / 2 + 0.07}" y="${-h / 2 + 0.2}">${t.num}</text>
+      <rect class="t-body" x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="0.13" fill="${fill}"/>
+      <circle class="tnum-bg" cx="${-w / 2 + 0.19}" cy="${-h / 2 + 0.19}" r="0.14"/>
+      <text class="tnum" x="${-w / 2 + 0.19}" y="${-h / 2 + 0.2}">${t.num}</text>
       ${name ? `<text class="tname ${ex ? '' : 'muted'}" y="0.09"${rot}>${esc(name)}</text>` : ''}
       ${powered ? `<circle class="pwr" cx="${w / 2 - 0.11}" cy="${h / 2 - 0.11}" r="0.07"><title>Électricité disponible</title></circle>` : ''}
       ${badgeSvg}
@@ -966,6 +995,26 @@ $('#ex-filters').addEventListener('click', (e) => {
   const b = e.target.closest('[data-filter]');
   if (b) { ui.filter = b.dataset.filter; renderExhibitors(); }
 });
+function showTab(tab) {
+  ui.tab = tab;
+  renderSidebar();
+  if (window.matchMedia('(max-width: 900px)').matches) $('.sidebar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$('#main-nav').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-nav]');
+  if (!b) return;
+  if (b.dataset.nav === 'list') { openList(); return; }
+  showTab(b.dataset.nav === 'plan' ? 'exhibitors' : b.dataset.nav);
+});
+$('#stats-row').addEventListener('click', (e) => {
+  const act = e.target.closest('[data-stat]')?.dataset.stat;
+  if (act === 'checks') showTab('checks');
+  if (act === 'unplaced') { ui.filter = 'unplaced'; showTab('exhibitors'); }
+  if (act === 'power') { ui.mode = 'power'; refresh(); }
+});
+$('#top-alert').addEventListener('click', (e) => {
+  if (e.target.closest('[data-alert="fix"]')) runOptimize('keep');
+});
 $('.tabs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-tab]');
   if (b) { ui.tab = b.dataset.tab; renderSidebar(); }
@@ -1004,8 +1053,6 @@ $('#tab-settings').addEventListener('change', (e) => {
   }
 });
 $('#tab-settings').addEventListener('click', (e) => {
-  const themeBtn = e.target.closest('[data-theme-id]');
-  if (themeBtn) { setTheme(themeBtn.dataset.themeId); return; }
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'reset-tables' && confirm('Remplacer toutes les tables par les 48 tables du plan papier ? Les attributions seront perdues. (Annulable avec Ctrl+Z)')) {
     commit((ev) => { ev.tables = defaultTables(); ev.assignments = {}; });

@@ -8,26 +8,13 @@
   <link rel="icon" type="image/svg+xml" href="icons/logo.svg">
   <link rel="icon" type="image/png" href="icons/favicon-64.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#c2512b">
+  <meta name="theme-color" content="#2d6a4f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Grenier à Sel">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/themes.css">
-  <script>
-    // Thème choisi (Réglages → Apparence, ou ?theme=… dans l'adresse), appliqué avant l'affichage.
-    (function () {
-      var themes = ['sel', 'clair', 'atlantique', 'marche', 'nuit', 'papier'];
-      var t = new URLSearchParams(location.search).get('theme');
-      try {
-        if (t && themes.indexOf(t) >= 0) localStorage.setItem('grenier-a-sel/theme', t);
-        else t = localStorage.getItem('grenier-a-sel/theme');
-      } catch (e) {}
-      if (t && t !== 'sel' && themes.indexOf(t) >= 0) document.documentElement.dataset.theme = t;
-    })();
-  </script>
 </head>
 <body>
   <svg id="svg-defs" width="0" height="0" aria-hidden="true" style="position:absolute">
@@ -37,7 +24,7 @@
         <line class="hatch-line" x1="0" y1="0" x2="0" y2="0.3" stroke-width="0.06"/>
       </pattern>
       <pattern id="hatch-red" width="0.4" height="0.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="0.4" stroke="#fecdca" stroke-width="0.07"/>
+        <line x1="0" y1="0" x2="0" y2="0.4" stroke="#f4b8a8" stroke-width="0.07"/>
       </pattern>
     </defs>
     <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></symbol>
@@ -55,6 +42,9 @@
     <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+    <symbol id="i-table2" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8M19 12v8"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
@@ -73,24 +63,22 @@
   </svg>
   <header class="topbar">
     <div class="brand">
-      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect class="lg-bg" width="64" height="64" rx="15"/><path class="lg-fg" d="M11 32.5 L32 17.5 L53 32.5 V51 H11 Z"/><path class="lg-roof" d="M6 34 L32 14.5 L58 34" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect class="lg-acc" x="15" y="38" width="7" height="5.5" rx="1.2"/><rect class="lg-acc" x="42" y="38" width="7" height="5.5" rx="1.2"/><path class="lg-door" d="M26.5 51 V40.5 a1.5 1.5 0 0 1 1.5 -1.5 H36 a1.5 1.5 0 0 1 1.5 1.5 V51 Z"/><path class="lg-c1" d="M32 21.6 L36.4 24 L32 26.4 L27.6 24 Z"/><path class="lg-c2" d="M27.6 24 L32 26.4 V31.2 L27.6 28.8 Z"/><path class="lg-c3" d="M36.4 24 L32 26.4 V31.2 L36.4 28.8 Z"/></svg>
-      <div>
-        <strong>Grenier à Sel</strong>
-        <small>Plans d'événements · Gainneville</small>
-      </div>
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#2d6a4f"/><path d="M10 18 h28 v3 a3.5 3.5 0 0 1 -7 0 a3.5 3.5 0 0 1 -7 0 a3.5 3.5 0 0 1 -7 0 a3.5 3.5 0 0 1 -7 0z" fill="#fbf7ef"/><path d="M17 18v3a3.5 3.5 0 0 1-7 0v-3zM31 18v3a3.5 3.5 0 0 1-7 0v-3z" fill="#f4b740"/><path d="M12 14h24l2 4H10z" fill="#f4b740"/><rect x="13" y="25" width="2.2" height="11" rx="1" fill="#fbf7ef"/><rect x="32.8" y="25" width="2.2" height="11" rx="1" fill="#fbf7ef"/><rect x="11" y="31" width="26" height="3.4" rx="1.4" fill="#fbf7ef"/><path d="M24 24.5l3 1.6-3 1.6-3-1.6z" fill="#fff"/><path d="M21 26.1l3 1.6v3l-3-1.6zM27 26.1l-3 1.6v3l3-1.6z" fill="#cde6d7"/></svg>
+      <b>Grenier <em>à sel</em></b>
     </div>
-    <div class="event-picker">
-      <label for="event-select" class="sr-only">Événement</label>
-      <select id="event-select"></select>
-      <button id="btn-new-event" class="btn"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg> Événement</button>
-      <button id="plan-status" class="plan-pill"></button>
-    </div>
+    <nav class="nav-pills" id="main-nav">
+      <button data-nav="plan" class="on">Plan</button>
+      <button data-nav="list">Liste</button>
+      <button data-nav="plans">Versions <span id="plans-badge" class="dot-badge" hidden title="Plan en cours non enregistré"></span></button>
+      <button data-nav="settings">Réglages</button>
+    </nav>
+    <span class="sp"></span>
     <div class="top-actions">
-      <button id="btn-install" class="btn primary" hidden title="Installer l'outil comme une application"><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg><span class="lbl"> Installer</span></button>
-      <button id="btn-undo" class="btn icon" title="Annuler (Ctrl+Z)"><svg class="i" aria-hidden="true"><use href="#i-undo"/></svg></button>
-      <button id="btn-redo" class="btn icon" title="Rétablir (Ctrl+Y)"><svg class="i" aria-hidden="true"><use href="#i-redo"/></svg></button>
+      <button id="btn-install" class="pill ghost" hidden title="Installer l'outil comme une application"><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg><span class="lbl">Installer</span></button>
+      <button id="btn-undo" class="round" title="Annuler (Ctrl+Z)"><svg class="i" aria-hidden="true"><use href="#i-undo"/></svg></button>
+      <button id="btn-redo" class="round" title="Rétablir (Ctrl+Y)"><svg class="i" aria-hidden="true"><use href="#i-redo"/></svg></button>
       <div class="menu">
-        <button class="btn" id="btn-data-menu">Données <svg class="i i-sm" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+        <button class="pill ghost" id="btn-data-menu"><span class="lbl">Données</span> <svg class="i i-sm" aria-hidden="true"><use href="#i-chevron"/></svg></button>
         <div class="menu-pop" id="data-menu" hidden>
           <button data-action="export-event"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg>Exporter cet événement (.json)</button>
           <button data-action="export-all"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg>Exporter tous les événements (.json)</button>
@@ -99,60 +87,38 @@
           <button data-action="export-png"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Image du plan (.png)</button>
         </div>
       </div>
-      <button id="btn-print" class="btn"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg><span class="lbl"> Imprimer</span></button>
+      <button id="btn-print" class="pill ghost"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg><span class="lbl">Imprimer</span></button>
+      <button id="btn-list" class="pill green"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg><span class="lbl">Exporter la liste</span><span id="list-badge" class="list-badge" hidden title="La liste a changé depuis le dernier export">!</span></button>
     </div>
   </header>
 
+  <section class="hero">
+    <div class="event-title">
+      <label for="event-select" class="sr-only">Événement</label>
+      <select id="event-select"></select>
+      <svg class="i chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+    </div>
+    <span class="date-pill" id="event-date"></span>
+    <button id="plan-status" class="plan-pill"></button>
+    <button id="btn-new-event" class="pill ghost small"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg> Nouvel événement</button>
+  </section>
+
+  <section class="stats-row" id="stats-row"></section>
+
   <main class="layout">
-    <aside class="sidebar">
-      <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="exhibitors" class="active">Exposants</button>
-        <button role="tab" data-tab="checks">Contrôles <span id="checks-badge" class="badge"></span></button>
-        <button role="tab" data-tab="plans">Plans <span id="plans-badge" class="dot-badge" hidden title="Plan en cours non enregistré"></span></button>
-        <button role="tab" data-tab="settings">Réglages</button>
-      </nav>
-
-      <section class="tab-panel" id="tab-exhibitors">
-        <div class="panel-head">
-          <div class="btn-row add-row">
-            <button class="btn primary" id="btn-fiches" title="Photographiez ou choisissez les photos des fiches d'inscription (une fiche par photo)"><svg class="i" aria-hidden="true"><use href="#i-camera"/></svg> Importer des fiches</button>
-            <button class="btn" id="btn-fiche-manual" title="Recopier une fiche papier à la main"><svg class="i" aria-hidden="true"><use href="#i-pen"/></svg> Saisir</button>
-            <button class="btn icon" id="btn-add-ex" title="Ajouter un exposant (formulaire complet)"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
-          </div>
-          <div class="btn-row">
-            <button class="btn" id="btn-place-missing" title="Place les exposants non placés en déplaçant le moins possible les autres">Placer les non placés</button>
-            <button class="btn" id="btn-optimize" title="Recalcule tout le plan (les exposants verrouillés restent en place)">Tout réorganiser</button>
-          </div>
-          <input type="search" id="ex-search" placeholder="Rechercher un exposant…" autocomplete="off">
-          <button class="btn block list-btn" id="btn-list"><span><svg class="i" aria-hidden="true"><use href="#i-table"/></svg> Liste des exposants · export</span><span id="list-badge" class="list-badge" hidden>à réexporter</span></button>
-          <div class="chips" id="ex-filters">
-            <button data-filter="all" class="active">Tous</button>
-            <button data-filter="unplaced">Non placés</button>
-            <button data-filter="issues">Problèmes</button>
-          </div>
-          <p class="demo-banner" id="demo-banner" hidden><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>Événement de démonstration : toutes les données sont <b>fictives</b>. Vous pouvez le supprimer dans « Réglages ».</span></p>
-          <div class="stats" id="ex-stats"></div>
-        </div>
-        <ul class="ex-list" id="ex-list"></ul>
-      </section>
-
-      <section class="tab-panel" id="tab-checks" hidden></section>
-      <section class="tab-panel" id="tab-plans" hidden></section>
-      <section class="tab-panel" id="tab-settings" hidden></section>
-    </aside>
-
-    <section class="map-wrap" id="map-wrap">
+    <section class="card map-wrap" id="map-wrap">
       <div class="map-toolbar">
+        <h2>Plan de la salle</h2>
+        <div class="toolbar-extra" id="toolbar-extra"></div>
         <div class="segmented" id="mode-switch">
           <button data-mode="place" class="active" title="Attribuer les tables aux exposants">Placement</button>
           <button data-mode="layout" title="Déplacer, ajouter, pivoter des tables">Tables</button>
-          <button data-mode="power" title="Voir et modifier les tables qui ont l'électricité"><svg class="i" aria-hidden="true"><use href="#i-zap"/></svg> Électricité</button>
+          <button data-mode="power" title="Voir et modifier les tables qui ont l'électricité"><svg class="i i-sm" aria-hidden="true"><use href="#i-zap"/></svg> Électricité</button>
         </div>
-        <div class="toolbar-extra" id="toolbar-extra"></div>
         <div class="zoom">
-          <button class="btn icon" id="zoom-out" title="Dézoomer"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
-          <button class="btn icon" id="zoom-fit" title="Ajuster à l'écran"><svg class="i" aria-hidden="true"><use href="#i-maximize"/></svg></button>
-          <button class="btn icon" id="zoom-in" title="Zoomer"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
+          <button class="round small" id="zoom-out" title="Dézoomer"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
+          <button class="round small" id="zoom-fit" title="Ajuster à l'écran"><svg class="i" aria-hidden="true"><use href="#i-maximize"/></svg></button>
+          <button class="round small" id="zoom-in" title="Zoomer"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
         </div>
       </div>
       <div class="mode-hint" id="mode-hint"></div>
@@ -161,19 +127,61 @@
         <div>
         Plan reconstitué d'après le plan papier : les cotes sont approximatives.
         <b>Électricité : seules les tables le long des murs y ont accès</b> (pas l'îlot central ni la scène) ; exceptions possibles en mode « Électricité ».
-        Pensez à <b>enregistrer vos plans</b> (onglet « Plans ») et à les exporter pour les garder.
+        Pensez à <b>enregistrer vos plans</b> (onglet « Versions ») et à les exporter pour les garder.
         <button class="link" id="notice-close">Compris</button>
         </div>
       </div>
-      <svg id="plan" xmlns="http://www.w3.org/2000/svg">
-        <g id="viewport">
-          <g id="room-layer"></g>
-          <g id="table-layer"></g>
-        </g>
-      </svg>
-      <div class="inspector" id="inspector" hidden></div>
+      <div class="plan-frame">
+        <svg id="plan" xmlns="http://www.w3.org/2000/svg">
+          <g id="viewport">
+            <g id="room-layer"></g>
+            <g id="table-layer"></g>
+          </g>
+        </svg>
+        <div class="inspector" id="inspector" hidden></div>
+      </div>
       <div class="legend" id="legend"></div>
     </section>
+
+    <aside class="card sidebar">
+      <button class="drop" id="btn-fiches" title="Photographiez ou choisissez les photos des fiches (une fiche par photo)">
+        <span class="drop-ic"><svg class="i" aria-hidden="true"><use href="#i-camera"/></svg></span>
+        <span><b>Ajouter des fiches d'inscription</b><small>Prenez-les en photo : l'exposant est lu et placé tout seul.</small></span>
+      </button>
+      <div class="side-actions">
+        <button class="link" id="btn-fiche-manual"><svg class="i i-sm" aria-hidden="true"><use href="#i-pen"/></svg> Saisir une fiche à la main</button>
+        <button class="link" id="btn-add-ex"><svg class="i i-sm" aria-hidden="true"><use href="#i-plus"/></svg> Exposant</button>
+      </div>
+      <div id="top-alert"></div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="exhibitors" class="active">Exposants</button>
+        <button role="tab" data-tab="checks">Contrôles <span id="checks-badge" class="badge"></span></button>
+        <button role="tab" data-tab="plans">Versions</button>
+        <button role="tab" data-tab="settings">Réglages</button>
+      </nav>
+
+      <section class="tab-panel" id="tab-exhibitors">
+        <div class="panel-head">
+          <input type="search" id="ex-search" placeholder="Rechercher un exposant…" autocomplete="off">
+          <div class="chips" id="ex-filters">
+            <button data-filter="all" class="active">Tous</button>
+            <button data-filter="unplaced">À placer</button>
+            <button data-filter="issues">Problèmes</button>
+          </div>
+          <p class="demo-banner" id="demo-banner" hidden><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>Événement de démonstration : toutes les données sont <b>fictives</b>. Vous pouvez le supprimer dans « Réglages ».</span></p>
+          <div class="stats" id="ex-stats"></div>
+        </div>
+        <ul class="ex-list" id="ex-list"></ul>
+        <div class="panel-foot">
+          <button class="pill ghost small" id="btn-place-missing" title="Place les exposants non placés en déplaçant le moins possible les autres">Placer les non placés</button>
+          <button class="pill ghost small" id="btn-optimize" title="Recalcule tout le plan (les exposants verrouillés restent en place)">Tout réorganiser</button>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-checks" hidden></section>
+      <section class="tab-panel" id="tab-plans" hidden></section>
+      <section class="tab-panel" id="tab-settings" hidden></section>
+    </aside>
   </main>
 
   <div id="toasts" aria-live="polite"></div>
