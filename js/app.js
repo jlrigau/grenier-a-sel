@@ -306,7 +306,12 @@ function placeAndAdjust(exId) {
   focusExhibitor(exId);
   const nums = tableNums(exId);
   const problems = (evaluation.byExhibitor.get(exId) || []).filter((i) => i.severity === 'error' || i.type === 'missing');
-  if (!nums.length) toast(`${ex.name} ajouté mais non placé : plus de tables libres adaptées.`, 'warning');
+  if (!nums.length) {
+    toast(`${ex.name} n'a pas de table : plus de tables libres adaptées. Le mettre en liste d'attente ?`, 'warning', {
+      label: "Liste d'attente",
+      fn: () => { commit((ev) => { exById(exId, ev).waitlist = true; }); toast(`${ex.name} est en liste d'attente.`, 'success'); },
+    });
+  }
   else if (problems.length) toast(`${ex.name} placé (table ${nums.join(', ')}), mais : ${problems[0].msg}`, 'warning');
   else toast(`${ex.name} placé sur ${nums.length > 1 ? 'les tables' : 'la table'} ${nums.join(', ')}${adjusted ? ` · plan réajusté (${plural(adjusted, 'exposant déplacé', 'exposants déplacés')})` : ''}`, 'success', { label: 'Annuler', fn: undo });
 }
@@ -402,7 +407,7 @@ function renderNav() {
 function renderTopAlert() {
   const box = $('#top-alert');
   const err = evaluation.issues.find((i) => i.severity === 'error');
-  const unplaced = cur().exhibitors.filter((e) => !evaluation.exTables.has(e.id)).length;
+  const unplaced = activeExhibitors().filter((e) => !evaluation.exTables.has(e.id)).length;
   if (err) {
     box.innerHTML = `<div class="alert coral">${ic('alert')}<span>${esc(err.msg)}</span><button class="pill tiny coral" data-alert="fix">Corriger</button></div>`;
   } else if (unplaced) {
@@ -444,12 +449,12 @@ function renderExhibitors() {
   const ev = cur();
   const q = ui.search.trim().toLowerCase();
   $$('#ex-filters button').forEach((b) => b.classList.toggle('active', b.dataset.filter === ui.filter));
-  const placedCount = ev.exhibitors.filter((e) => evaluation.exTables.has(e.id)).length;
-  const needed = ev.exhibitors.reduce((s, e) => s + (Number(e.tables) || 1), 0);
+  const placedCount = activeExhibitors(ev).filter((e) => evaluation.exTables.has(e.id)).length;
+  const needed = activeExhibitors(ev).reduce((s, e) => s + (Number(e.tables) || 1), 0);
   const free = ev.tables.filter((t) => !ev.assignments[t.id] && !t.blocked).length;
   const grilles = ev.exhibitors.reduce((s, e) => s + (Number(e.grilles) || 0), 0);
   $('#demo-banner').hidden = !ev.demo;
-  $('#ex-stats').innerHTML = `<span><b>${placedCount}</b>/${ev.exhibitors.length} placés</span><span><b>${needed}</b> tables demandées / ${ev.tables.filter((t) => !t.blocked).length}</span><span><b>${free}</b> libres</span><span><b>${grilles}</b> grilles${ev.settings.grillesAvailable ? ' / ' + ev.settings.grillesAvailable : ''}</span>`;
+  $('#ex-stats').innerHTML = `<span><b>${placedCount}</b>/${activeExhibitors(ev).length} placés</span><span><b>${needed}</b> tables demandées / ${ev.tables.filter((t) => !t.blocked).length}</span><span><b>${free}</b> libres</span><span><b>${grilles}</b> grilles${ev.settings.grillesAvailable ? ' / ' + ev.settings.grillesAvailable : ''}</span>`;
 
   const items = ev.exhibitors
     .map((ex) => ({ ex, st: exStatus(ex) }))
@@ -531,16 +536,16 @@ function renderChecks() {
   const errors = evaluation.issues.filter((i) => i.severity === 'error');
   const warnings = evaluation.issues.filter((i) => i.severity === 'warning');
   const infos = evaluation.issues.filter((i) => i.severity === 'info');
-  const placed = ev.exhibitors.filter((e) => evaluation.exTables.has(e.id)).length;
+  const placed = activeExhibitors(ev).filter((e) => evaluation.exTables.has(e.id)).length;
   const used = Object.keys(ev.assignments).filter((t) => tableById(t)).length;
-  const elecNeeds = ev.exhibitors.filter((e) => e.electricity).length;
+  const elecNeeds = activeExhibitors(ev).filter((e) => e.electricity).length;
   const section = (title, list, cls) => list.length ? `<h3 class="${cls}">${title} (${list.length})</h3><ul class="issues">${list.map((i) => {
     const idx = evaluation.issues.indexOf(i);
     return `<li class="sev-${i.severity}" data-issue="${idx}">${esc(i.msg)}</li>`;
   }).join('')}</ul>` : '';
   $('#tab-checks').innerHTML = `
     <div class="summary">
-      <div class="kcard"><b>${placed}/${ev.exhibitors.length}</b><span>exposants placés</span></div>
+      <div class="kcard"><b>${placed}/${activeExhibitors(ev).length}</b><span>exposants placés</span></div>
       <div class="kcard"><b>${used}/${ev.tables.length}</b><span>tables attribuées</span></div>
       <div class="kcard ${errors.length ? 'bad' : 'good'}"><b>${errors.length}</b><span>${errors.length > 1 ? 'conflits' : 'conflit'}</span></div>
       <div class="kcard"><b>${elecNeeds}</b><span>besoin${elecNeeds > 1 ? 's' : ''} électrique${elecNeeds > 1 ? 's' : ''}</span></div>
@@ -791,7 +796,7 @@ function renderInspector() {
   const selEx = ui.selectedEx && ui.selectedEx !== ex?.id ? exById(ui.selectedEx) : null;
   const options = [...ev.exhibitors].sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((e) => {
     const nums = tableNums(e.id);
-    return `<option value="${e.id}" ${ex && ex.id === e.id ? 'selected' : ''}>${esc(e.name)}${e.electricity ? ' (électricité)' : ''}${nums.length ? ` (table ${nums.join(', ')})` : ' — non placé'}</option>`;
+    return `<option value="${e.id}" ${ex && ex.id === e.id ? 'selected' : ''}>${esc(e.name)}${e.electricity ? ' (électricité)' : ''}${nums.length ? ` (table ${nums.join(', ')})` : e.waitlist ? " — liste d'attente" : ' — non placé'}</option>`;
   }).join('');
   box.innerHTML = `${head}
     <div class="insp-power ${hasPower(t) ? 'on' : ''}">${ic('zap', 'i-sm')} ${hasPower(t) ? 'Électricité disponible' : 'Pas d\'électricité'}</div>
@@ -1675,7 +1680,7 @@ function renderList() {
       const lab = `data-label="${esc(c.label)}"`;
       if (c.key === 'electricity') return `<td ${lab} class="${ex.electricity ? '' : 'empty'}">${ex.electricity ? `<span class="elec">${ic('zap', 'i-sm')}</span> oui` : '<span class="muted">non</span>'}</td>`;
       if (c.key === 'lastName') return `<td ${lab} class="name"><span class="dot" style="background:${colorFor(ex)}"></span> <b>${esc(v)}</b></td>`;
-      if (c.key === 'tablesNums') return `<td ${lab} class="tables">${v ? esc(v) : '<span class="warn-text">non placé</span>'}</td>`;
+      if (c.key === 'tablesNums') return `<td ${lab} class="tables">${v ? esc(v) : ex.waitlist ? '<span class="muted">attente</span>' : '<span class="warn-text">non placé</span>'}</td>`;
       const shown = v === 0 && c.key === 'grilles' ? '' : v;
       return `<td ${lab} class="${c.num ? 'num' : ''} ${shown === '' || shown == null ? 'empty' : ''}">${esc(shown)}</td>`;
     }).join('')}</tr>`).join('') || `<tr><td colspan="${LIST_COLUMNS.length}" class="muted">Aucun exposant.</td></tr>`}</tbody>
@@ -2015,8 +2020,8 @@ function isUnsaved(ev = cur()) {
 function planSummary(plan) {
   const r = evaluate(plan.data);
   return {
-    placed: plan.data.exhibitors.filter((e) => r.exTables.has(e.id)).length,
-    total: plan.data.exhibitors.length,
+    placed: activeExhibitors(plan.data).filter((e) => r.exTables.has(e.id)).length,
+    total: activeExhibitors(plan.data).length,
     errors: r.issues.filter((i) => i.severity === 'error').length,
   };
 }
@@ -2411,7 +2416,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v53';
+const APP_VERSION = 'v54';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------

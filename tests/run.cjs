@@ -174,6 +174,9 @@ test("suivi : liste d'attente libère la table, message prérempli", async () =>
   await click(p, '#ex-save');
   const tables = await p.evaluate((i) => Object.values(grenier.event.assignments).filter((v) => v === i).length, id);
   assert.equal(tables, 0);
+  // la liste d'attente n'est ni « à placer » ni comptée dans les placés
+  assert.equal(await p.evaluate(() => document.querySelector('#top-alert').textContent.trim()), '', "pas d'alerte « à placer »");
+  assert.match(await p.evaluate(() => document.querySelector('#stats-row .stat').textContent), /15\/15.*1 en liste d'attente/);
   await click(p, `[data-edit="${id}"]`);
   await click(p, '#ex-notify');
   assert.match(await p.inputValue('#notify-text'), /liste d'attente/);
