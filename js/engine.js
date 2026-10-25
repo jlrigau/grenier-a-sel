@@ -8,14 +8,18 @@ export const DEFAULT_SETTINGS = {
   flagSameCategory: true, // signaler deux exposants de même catégorie côte à côte
   grillesAvailable: 0, // nombre de grilles disponibles (0 = non vérifié)
   autoPlaceFiches: true, // placer automatiquement chaque nouvelle fiche
+  grillesOnIlot: true, // exposants avec grilles : de préférence sur l'îlot central
 };
 
 export const SEVERITY_RANK = { error: 3, warning: 2, info: 1 };
 
 const WEIGHTS = {
   unplaced: 700, missingTable: 250, elec: 1000, avoid: 1000, badTable: 400,
-  zone: 90, near: 12, nearCap: 120, sameCategory: 35, moved: 50,
+  zone: 90, near: 12, nearCap: 120, sameCategory: 35, moved: 50, grillesIlot: 60, prefPlace: 40,
 };
+// Préférences douces (n'empêchent rien) : grilles sur l'îlot central, place de l'édition précédente.
+const wantsIlot = (s, ex) => s.grillesOnIlot && (Number(ex.grilles) || 0) > 0 && !ex.zone;
+const hasPref = (ex) => Array.isArray(ex.prefTables) && ex.prefTables.length > 0;
 
 // ---------- Géométrie ----------
 
@@ -189,6 +193,12 @@ export function evaluate(ev) {
     if (ex.zone && g.some((i) => ctx.region[i] !== ex.zone)) {
       issues.push({ ...base, severity: 'warning', type: 'zone', msg: `${ex.name} souhaite être : ${regionLabel(ex.zone)}` });
     }
+    if (wantsIlot(s, ex) && !g.some((i) => ctx.region[i] === 'ilot')) {
+      issues.push({ ...base, severity: 'info', type: 'grillesZone', msg: `${ex.name} a des grilles : l'îlot central (autour de l'espace grilles) serait plus pratique` });
+    }
+    if (hasPref(ex) && !g.some((i) => ex.prefTables.includes(ctx.tables[i].num))) {
+      issues.push({ ...base, severity: 'info', type: 'prefPlace', msg: `${ex.name} avait la table ${ex.prefTables.join(' + ')} à la dernière édition` });
+    }
     const blocked = g.filter((i) => ctx.tables[i].blocked);
     if (blocked.length) issues.push({ ...base, severity: 'warning', type: 'blocked', msg: `${ex.name} est sur une table marquée non attribuable (${numsOf(blocked)})` });
   }
@@ -343,6 +353,8 @@ function makeCost(ctx, P, { stability }) {
         if (!g.some((t) => power[t])) c += WEIGHTS.elec;
       }
       if (exs[e].zone) for (const t of g) if (region[t] !== exs[e].zone) { c += WEIGHTS.zone; break; }
+      if (wantsIlot(s, exs[e]) && !g.some((t) => region[t] === 'ilot')) c += WEIGHTS.grillesIlot;
+      if (hasPref(exs[e]) && !g.some((t) => exs[e].prefTables.includes(ctx.tables[t].num))) c += WEIGHTS.prefPlace;
       for (const t of g) if (badTables.has(t)) { c += WEIGHTS.badTable; break; }
       if (stability && P.origKeys[e] && P.origKeys[e] !== g.join(',')) c += WEIGHTS.moved;
     }

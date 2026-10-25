@@ -279,6 +279,21 @@ async function copyText(text) {
   return true;
 }
 
+// Même exposant dans une édition précédente (même e-mail, téléphone ou nom) : ses numéros de table,
+// proposés en priorité lors du placement.
+function previousPlace(fields, ev = cur()) {
+  const keys = [fields.email, fields.phone, fields.name].map((k) => normalizeKey(k || '')).filter(Boolean);
+  const others = db.events.filter((e) => e.id !== ev.id && !e.demo)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.updatedAt || 0) - (a.updatedAt || 0));
+  for (const o of others) {
+    const ex = o.exhibitors.find((x) => [x.email, x.phone, x.name].some((k) => k && keys.includes(normalizeKey(k))));
+    if (!ex) continue;
+    const nums = o.tables.filter((t) => o.assignments[t.id] === ex.id).map((t) => t.num).sort((a, b) => a - b);
+    if (nums.length && nums.every((n) => ev.tables.some((t) => t.num === n))) return { nums, event: o.name };
+  }
+  return null;
+}
+
 // Libère les tables d'un exposant (passage en liste d'attente).
 function freeTablesOf(ev, id) {
   for (const [tid, eid] of Object.entries(ev.assignments)) if (eid === id) delete ev.assignments[tid];
@@ -561,6 +576,7 @@ function renderExhibitors() {
       if (ex.email) rows.push(`<div><span class="k">E-mail</span> <a href="mailto:${esc(ex.email)}">${esc(ex.email)}</a></div>`);
       if (ex.payment || ex.paymentStatus) rows.push(`<div><span class="k">Règlement</span> ${ex.payment ? esc(ex.payment) + ' € · ' : ''}${payLabel(ex)}</div>`);
       if (ex.confirmed) rows.push(`<div><span class="k">Confirmation</span> envoyée</div>`);
+      if (ex.prefTables?.length) rows.push(`<div><span class="k">Place précédente</span> table ${ex.prefTables.join(' + ')}</div>`);
       if (ex.notes) rows.push(`<div><span class="k">Notes</span> ${esc(ex.notes)}</div>`);
       const problems = st.issues.filter((i) => i.type !== 'unplaced');
       detail = `<div class="ex-detail">
@@ -635,6 +651,7 @@ function renderSettings() {
     <label>Écart max. pour que deux tables soient contiguës
       <span class="with-unit"><input type="number" step="0.1" min="0" max="3" data-set="adjacencyGap" value="${s.adjacencyGap}"> m</span></label>
     <label class="check"><input type="checkbox" data-set="flagSameCategory" ${s.flagSameCategory ? 'checked' : ''}> Éviter deux exposants de même catégorie côte à côte</label>
+    <label class="check"><input type="checkbox" data-set="grillesOnIlot" ${s.grillesOnIlot ? 'checked' : ''}> Placer de préférence sur l'îlot central les exposants qui ont des grilles</label>
     <label>Nombre de grilles disponibles (0 = ne pas vérifier)
       <span class="with-unit"><input type="number" step="1" min="0" max="500" data-set="grillesAvailable" value="${s.grillesAvailable}"></span></label>
 
@@ -1449,6 +1466,7 @@ exForm.addEventListener('submit', (e) => {
   };
   const isNew = !editingId;
   const id = editingId || uid('ex');
+  if (isNew) { const prev = previousPlace(fields); if (prev) fields.prefTables = prev.nums; }
   commit((ev) => {
     if (isNew) ev.exhibitors.push(newExhibitor({ ...fields, id }));
     else Object.assign(exById(id, ev), fields);
@@ -1610,7 +1628,10 @@ ficheForm.addEventListener('submit', (e) => {
     commit((ev) => { Object.assign(exById(id, ev), fields); ensureCategoryColor(ev, fields.category); });
   } else {
     id = uid('ex');
+    const prev = previousPlace(fields);
+    if (prev) fields.prefTables = prev.nums;
     commit((ev) => { ev.exhibitors.push(newExhibitor({ ...fields, id })); ensureCategoryColor(ev, fields.category); });
+    if (prev) toast(`${name} avait la table ${prev.nums.join(' + ')} à « ${prev.event} » : elle lui sera proposée en priorité.`, 'info');
   }
   const auto = cur().settings.autoPlaceFiches !== false;
   const sameSize = same && same.id === id && tablesOf(id).length === fields.tables;
@@ -2534,7 +2555,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v43';
+const APP_VERSION = 'v44';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------
