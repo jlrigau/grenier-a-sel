@@ -49,7 +49,7 @@ export const ROOM = {
     { x: 0, y: 2.6, w: 2, h: 12.3 },
     { x: 2, y: 12.9, w: 6.2, h: 2 },
     { x: 4.25, y: 4.1, w: 16, h: 6 },
-    { x: 4.5, y: 0, w: 16, h: 2 },
+    { x: 2.3, y: 0, w: 18.2, h: 2 },
     { x: 23, y: 3.1, w: 2, h: 8 },
     { x: 11.2, y: 12.9, w: 3.25, h: 2 },
     { x: 18.7, y: 12.9, w: 3.5, h: 2 },
@@ -92,7 +92,8 @@ export function regionLabel(id) {
   return r ? r.label : 'Hors salle';
 }
 
-export const TABLE_SIZE = { w: 1.6, h: 0.8 };
+// Tables de 1,80 m (comme indiqué sur les fiches d'inscription).
+export const TABLE_SIZE = { w: 1.8, h: 0.8 };
 
 // Les 48 tables du plan papier, placées côté allée dans chaque bande de stands.
 export function defaultTables() {
@@ -101,17 +102,17 @@ export function defaultTables() {
     id: 't' + (tables.length + 1), num: tables.length + 1,
     x: round(x), y: round(y), w: TABLE_SIZE.w, h: TABLE_SIZE.h, rot, blocked: false,
   });
-  [3.6, 5.5, 7.4, 9.3, 11.2].forEach((y) => add(1.6, y, 90)); // mur gauche
-  [3.6, 5.4, 7.2].forEach((x) => add(x, 13.3, 0)); // bas gauche
-  for (let i = 0; i < 10; i++) add(5.3 + i * 1.6, 1.6, 0); // mur du haut
-  for (let i = 0; i < 7; i++) add(7.1 + i * 1.7, 4.5, 0); // îlot, côté haut
-  add(19.85, 6.25, 90); add(19.85, 7.95, 90); // îlot, bout droit
-  for (let i = 0; i < 7; i++) add(17.3 - i * 1.7, 9.7, 0); // îlot, côté bas
-  add(4.65, 7.95, 90); add(4.65, 6.25, 90); // îlot, bout gauche
+  [3.7, 5.55, 7.4, 9.25, 11.1].forEach((y) => add(1.6, y, 90)); // mur gauche
+  [3.35, 5.2, 7.05].forEach((x) => add(x, 13.3, 0)); // bas gauche
+  for (let i = 0; i < 10; i++) add(3.3 + i * 1.8, 1.6, 0); // mur du haut
+  for (let i = 0; i < 7; i++) add(6.55 + i * 1.9, 4.5, 0); // îlot, côté haut
+  add(19.85, 6.15, 90); add(19.85, 8.05, 90); // îlot, bout droit
+  for (let i = 0; i < 7; i++) add(17.95 - i * 1.9, 9.7, 0); // îlot, côté bas
+  add(4.65, 8.05, 90); add(4.65, 6.15, 90); // îlot, bout gauche
   [4.1, 6.1, 8.1, 10.1].forEach((y) => add(23.4, y, 90)); // devant la scène
-  [12.05, 13.65].forEach((x) => add(x, 13.3, 0)); // entre les portes
-  [19.6, 21.3].forEach((x) => add(x, 13.3, 0)); // près de la réserve
-  [20.4, 22.2].forEach((y) => add(10, y, 90)); // hall
+  [12, 13.9].forEach((x) => add(x, 13.3, 0)); // entre les portes
+  [19.6, 21.45].forEach((x) => add(x, 13.3, 0)); // près de la réserve
+  [20.5, 22.4].forEach((y) => add(10, y, 90)); // hall
   [3.8, 10.7].forEach((y) => add(27, y, 90)); // scène
   return tables;
 }

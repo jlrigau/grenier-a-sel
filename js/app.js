@@ -1,5 +1,6 @@
 import { ROOM, REGIONS, TABLE_SIZE, defaultTables, regionAt, regionLabel, hasPower, wallPower } from './room.js';
 import { evaluate, optimize, placeOne, groupAround, tableRect, DEFAULT_SETTINGS, SEVERITY_RANK } from './engine.js';
+import { readFiche, guessCategory } from './fiches.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
 const NOTICE_KEY = 'grenier-a-sel/notice-dismissed';
@@ -29,14 +30,22 @@ function newEvent(name, date = '') {
 }
 
 function newExhibitor(fields = {}) {
-  return { id: uid('ex'), name: '', category: '', tables: 1, electricity: false, zone: '', avoid: [], near: [], locked: false, contact: '', notes: '', ...fields };
+  return {
+    id: uid('ex'), name: '', category: '', tables: 1, electricity: false, zone: '', avoid: [], near: [], locked: false,
+    firstName: '', lastName: '', products: '', grilles: 0, phone: '', email: '', payment: '', notes: '', ...fields,
+  };
 }
 
 function normalizeEvent(ev) {
   const base = newEvent(ev.name || 'Événement');
   const out = { ...base, ...ev };
   out.settings = { ...DEFAULT_SETTINGS, ...(ev.settings || {}) };
-  out.exhibitors = (ev.exhibitors || []).map((e) => newExhibitor({ ...e, avoid: e.avoid || [], near: e.near || [] }));
+  out.exhibitors = (ev.exhibitors || []).map((e) => {
+    const ex = newExhibitor({ ...e, avoid: e.avoid || [], near: e.near || [] });
+    if (ex.contact && !ex.phone && !ex.email) { if (ex.contact.includes('@')) ex.email = ex.contact; else ex.phone = ex.contact; }
+    delete ex.contact;
+    return ex;
+  });
   out.categoryColors = ev.categoryColors || {};
   out.assignments = ev.assignments || {};
   delete out.outlets;
@@ -195,24 +204,38 @@ function assignToTable(exId, tableId, { addOnly = false } = {}) {
   if (message) toast(message, 'info');
 }
 
-function autoPlace(exId) {
+// Place un exposant ; si sa place ne respecte pas les contraintes, réajuste le plan
+// en déplaçant le moins d'exposants possible (les exposants verrouillés ne bougent pas).
+function placeAndAdjust(exId) {
   const ex = exById(exId);
   if (!ex) return;
-  const res = placeOne(cur(), exId);
-  if (!res.found) {
-    toast(`Aucune table libre pour ${ex.name}.`, 'warning', { label: 'Réorganiser le plan', fn: () => runOptimize('keep') });
-    return;
+  const trial = structuredClone(cur());
+  const res = placeOne(trial, exId);
+  trial.assignments = res.assignments;
+  const score = (e) => {
+    const r = evaluate(e);
+    return r.issues.filter((i) => i.severity === 'error').length * 10 + r.issues.filter((i) => i.type === 'unplaced' || i.type === 'missing').length;
+  };
+  const mine = (e) => (evaluate(e).byExhibitor.get(exId) || []).filter((i) => i.severity === 'error' || i.type === 'missing' || i.type === 'unplaced');
+  let adjusted = 0;
+  if (!res.found || mine(trial).length) {
+    const before = Object.fromEntries(Object.entries(trial.assignments));
+    const opt = optimize(trial, { mode: 'keep', iterations: 30000 });
+    const candidate = { ...trial, assignments: opt.assignments };
+    if (score(candidate) < score(trial)) {
+      trial.assignments = opt.assignments;
+      adjusted = trial.exhibitors.filter((e) => e.id !== exId && JSON.stringify(tablesOf(e.id, { ...trial, assignments: before }).map((t) => t.id)) !== JSON.stringify(tablesOf(e.id, trial).map((t) => t.id))).length;
+    }
   }
-  commit((ev) => { ev.assignments = res.assignments; });
+  commit((ev) => { ev.assignments = trial.assignments; });
   ui.selectedEx = exId;
   refresh();
   focusExhibitor(exId);
+  const nums = tableNums(exId);
   const problems = (evaluation.byExhibitor.get(exId) || []).filter((i) => i.severity === 'error' || i.type === 'missing');
-  if (problems.length) {
-    toast(`${ex.name} placé, mais : ${problems[0].msg}`, 'warning', { label: 'Réorganiser les autres', fn: () => runOptimize('keep') });
-  } else {
-    toast(`${ex.name} placé sur ${tableNums(exId).length > 1 ? 'les tables' : 'la table'} ${tableNums(exId).join(', ')}`, 'success');
-  }
+  if (!nums.length) toast(`${ex.name} ajouté mais non placé : plus de tables libres adaptées.`, 'warning');
+  else if (problems.length) toast(`${ex.name} placé (table ${nums.join(', ')}), mais : ${problems[0].msg}`, 'warning');
+  else toast(`${ex.name} placé sur ${nums.length > 1 ? 'les tables' : 'la table'} ${nums.join(', ')}${adjusted ? ` · plan réajusté (${plural(adjusted, 'exposant déplacé', 'exposants déplacés')})` : ''}`, 'success', { label: 'Annuler', fn: undo });
 }
 
 function runOptimize(mode) {
@@ -308,12 +331,13 @@ function renderExhibitors() {
   const placedCount = ev.exhibitors.filter((e) => evaluation.exTables.has(e.id)).length;
   const needed = ev.exhibitors.reduce((s, e) => s + (Number(e.tables) || 1), 0);
   const free = ev.tables.filter((t) => !ev.assignments[t.id] && !t.blocked).length;
-  $('#ex-stats').innerHTML = `<span><b>${placedCount}</b>/${ev.exhibitors.length} placés</span><span><b>${needed}</b> tables demandées / ${ev.tables.filter((t) => !t.blocked).length}</span><span><b>${free}</b> libres</span>`;
+  const grilles = ev.exhibitors.reduce((s, e) => s + (Number(e.grilles) || 0), 0);
+  $('#ex-stats').innerHTML = `<span><b>${placedCount}</b>/${ev.exhibitors.length} placés</span><span><b>${needed}</b> tables demandées / ${ev.tables.filter((t) => !t.blocked).length}</span><span><b>${free}</b> libres</span><span><b>${grilles}</b> grilles${ev.settings.grillesAvailable ? ' / ' + ev.settings.grillesAvailable : ''}</span>`;
 
   const items = ev.exhibitors
     .map((ex) => ({ ex, st: exStatus(ex) }))
     .filter(({ ex, st }) => {
-      if (q && !`${ex.name} ${ex.category} ${ex.contact} ${ex.notes}`.toLowerCase().includes(q)) return false;
+      if (q && !`${ex.name} ${ex.category} ${ex.products} ${ex.phone} ${ex.email} ${ex.notes}`.toLowerCase().includes(q)) return false;
       if (ui.filter === 'unplaced') return !st.placed;
       if (ui.filter === 'issues') return st.worst === 'error' || st.worst === 'warning' || !st.placed;
       return true;
@@ -345,7 +369,11 @@ function renderExhibitors() {
       const avoidAll = [...new Set([...(ex.avoid || []), ...avoidedBy])];
       if (avoidAll.length) rows.push(`<div><span class="k">À séparer de</span> ${names(avoidAll)}</div>`);
       if ((ex.near || []).length) rows.push(`<div><span class="k">Proche de</span> ${names(ex.near)}</div>`);
-      if (ex.contact) rows.push(`<div><span class="k">Contact</span> ${esc(ex.contact)}</div>`);
+      if (ex.products) rows.push(`<div><span class="k">Objets vendus</span> ${esc(ex.products)}</div>`);
+      if (ex.grilles) rows.push(`<div><span class="k">Grilles</span> ${ex.grilles}</div>`);
+      if (ex.phone) rows.push(`<div><span class="k">Téléphone</span> <a href="tel:${esc(ex.phone.replace(/\s/g, ''))}">${esc(ex.phone)}</a></div>`);
+      if (ex.email) rows.push(`<div><span class="k">E-mail</span> <a href="mailto:${esc(ex.email)}">${esc(ex.email)}</a></div>`);
+      if (ex.payment) rows.push(`<div><span class="k">Règlement</span> ${esc(ex.payment)} €</div>`);
       if (ex.notes) rows.push(`<div><span class="k">Notes</span> ${esc(ex.notes)}</div>`);
       const problems = st.issues.filter((i) => i.type !== 'unplaced');
       detail = `<div class="ex-detail">
@@ -363,7 +391,7 @@ function renderExhibitors() {
       <span class="dot" style="background:${colorFor(ex)}"></span>
       <div class="ex-main">
         <div class="ex-name">${esc(ex.name)}</div>
-        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.electricity ? ' · <span class="elec" title="Besoin d\'électricité">⚡</span>' : ''}${ex.locked ? ' · 🔒' : ''}</div>
+        <div class="ex-meta">${ex.category ? esc(ex.category) + ' · ' : ''}${plural(ex.tables || 1, 'table')}${ex.grilles ? ` · ${plural(ex.grilles, 'grille')}` : ''}${ex.electricity ? ' · <span class="elec" title="Besoin d\'électricité">⚡</span>' : ''}${ex.locked ? ' · 🔒' : ''}</div>
         <div class="ex-where">${nums.length ? 'Table' + (nums.length > 1 ? 's' : '') + ' ' + nums.join(', ') : 'Non placé'}</div>
       </div>
       ${icon}
@@ -417,6 +445,11 @@ function renderSettings() {
     <label>Écart max. pour que deux tables soient contiguës
       <span class="with-unit"><input type="number" step="0.1" min="0" max="3" data-set="adjacencyGap" value="${s.adjacencyGap}"> m</span></label>
     <label class="check"><input type="checkbox" data-set="flagSameCategory" ${s.flagSameCategory ? 'checked' : ''}> Éviter deux exposants de même catégorie côte à côte</label>
+    <label>Nombre de grilles disponibles (0 = ne pas vérifier)
+      <span class="with-unit"><input type="number" step="1" min="0" max="500" data-set="grillesAvailable" value="${s.grillesAvailable}"></span></label>
+
+    <h3>Fiches d'inscription</h3>
+    <label class="check"><input type="checkbox" data-set="autoPlaceFiches" ${s.autoPlaceFiches ? 'checked' : ''}> Placer automatiquement chaque nouvelle fiche (et réajuster le plan si besoin)</label>
 
     <h3>Salle</h3>
     <p class="muted">${ev.tables.length} tables, dont ${ev.tables.filter(hasPower).length} avec accès à l'électricité.
@@ -857,7 +890,7 @@ $('#ex-list').addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]');
   if (act) {
     const id = act.dataset.id;
-    if (act.dataset.act === 'auto') autoPlace(id);
+    if (act.dataset.act === 'auto') placeAndAdjust(id);
     if (act.dataset.act === 'unplace') commit((ev) => unassign(ev, id));
     if (act.dataset.act === 'lock') commit((ev) => { const x = exById(id, ev); x.locked = !x.locked; });
     return;
@@ -1045,7 +1078,11 @@ function openExhibitorDialog(id) {
   exForm.tables.value = ex.tables || 1;
   exForm.electricity.checked = !!ex.electricity;
   exForm.locked.checked = !!ex.locked;
-  exForm.contact.value = ex.contact || '';
+  exForm.products.value = ex.products || '';
+  exForm.grilles.value = ex.grilles || 0;
+  exForm.payment.value = ex.payment || '';
+  exForm.phone.value = ex.phone || '';
+  exForm.email.value = ex.email || '';
   exForm.notes.value = ex.notes || '';
   exForm.zone.innerHTML = `<option value="">Indifférent</option>` + REGIONS.map((r) => `<option value="${r.id}">${esc(r.label)}</option>`).join('');
   exForm.zone.value = ex.zone || '';
@@ -1113,7 +1150,11 @@ exForm.addEventListener('submit', (e) => {
     avoid: [...relationState.avoid],
     near: [...relationState.near],
     locked: exForm.locked.checked,
-    contact: exForm.contact.value.trim(),
+    products: exForm.products.value.trim(),
+    grilles: clamp(Math.round(Number(exForm.grilles.value) || 0), 0, 30),
+    payment: exForm.payment.value.trim(),
+    phone: exForm.phone.value.trim(),
+    email: exForm.email.value.trim(),
     notes: exForm.notes.value.trim(),
   };
   const isNew = !editingId;
@@ -1126,8 +1167,161 @@ exForm.addEventListener('submit', (e) => {
   exDialog.close();
   ui.selectedEx = id;
   refresh();
-  if (action === 'place') autoPlace(id);
-  else if (isNew) toast(`${name} ajouté. Glissez-le sur une table ou utilisez « Placer automatiquement ».`, 'success', { label: 'Placer maintenant', fn: () => autoPlace(id) });
+  if (action === 'place') placeAndAdjust(id);
+  else if (isNew) toast(`${name} ajouté. Glissez-le sur une table ou utilisez « Placer automatiquement ».`, 'success', { label: 'Placer maintenant', fn: () => placeAndAdjust(id) });
+});
+
+// ---------- Fiches d'inscription ----------
+
+const ficheDialog = $('#fiche-dialog');
+const ficheForm = $('#fiche-form');
+const FICHE_LABELS = { products: 'objets vendus', firstName: 'prénom', lastName: 'nom', tables: 'nombre de tables', grilles: 'grilles', electricity: 'électricité', phone: 'téléphone', email: 'e-mail' };
+let ficheQueue = [];
+let ficheIndex = 0;
+let ficheToken = 0;
+
+$('#btn-fiches').onclick = () => $('#fiche-files').click();
+$('#btn-fiche-manual').onclick = () => { ficheQueue = [null]; ficheIndex = 0; showFiche(); };
+$('#fiche-files').addEventListener('change', (e) => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if (!files.length) return;
+  ficheQueue = files;
+  ficheIndex = 0;
+  showFiche();
+});
+
+function setFicheFields(f) {
+  ficheForm.reset();
+  for (const k of ['products', 'firstName', 'lastName', 'phone', 'email', 'payment', 'notes']) ficheForm[k].value = f[k] || '';
+  ficheForm.tables.value = f.tables || 1;
+  ficheForm.grilles.value = f.grilles || 0;
+  ficheForm.category.value = f.category || guessCategory(f.products);
+  $$('input[name=electricity]', ficheForm).forEach((r) => { r.checked = typeof f.electricity === 'boolean' && r.value === (f.electricity ? 'oui' : 'non'); });
+  $$('[data-f]', ficheForm).forEach((el) => el.classList.toggle('to-check', !!f.uncertain?.has(el.dataset.f)));
+  const todo = [...(f.uncertain || [])].map((k) => FICHE_LABELS[k]).filter(Boolean);
+  const warn = $('#fiche-warning');
+  warn.hidden = !todo.length;
+  warn.textContent = todo.length ? `À vérifier sur la photo : ${todo.join(', ')}.` : '';
+}
+
+function setFicheBusy(busy) {
+  $('#fiche-progress').hidden = !busy;
+  $$('input, button[type=submit]', ficheForm).forEach((el) => { el.disabled = busy; });
+}
+
+async function showFiche() {
+  const file = ficheQueue[ficheIndex];
+  const token = ++ficheToken;
+  $('#fiche-count').textContent = ficheQueue.length > 1 ? `(${ficheIndex + 1}/${ficheQueue.length})` : '';
+  const cats = [...new Set(cur().exhibitors.map((e) => (e.category || '').trim()).filter(Boolean))].sort();
+  $('#category-list').innerHTML = cats.map((c) => `<option value="${esc(c)}">`).join('');
+  $('#fiche-photo').hidden = !file;
+  ficheDialog.classList.toggle('no-photo', !file);
+  $('#fiche-img').hidden = true;
+  $('#fiche-raw').hidden = true;
+  setFicheFields({ uncertain: file ? new Set() : new Set(['electricity']) });
+  $('#fiche-warning').hidden = true;
+  $('#fiche-add').textContent = ficheIndex < ficheQueue.length - 1 ? 'Ajouter et fiche suivante' : 'Ajouter et placer';
+  $('#fiche-skip').hidden = ficheQueue.length < 2;
+  if (!ficheDialog.open) ficheDialog.showModal();
+  if (!file) { ficheForm.products.focus(); return; }
+
+  setFicheBusy(true);
+  $('#fiche-bar').value = 0;
+  $('#fiche-step').textContent = 'Lecture de la fiche…';
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const res = await readFiche(file, ({ step, progress }) => {
+      if (token !== ficheToken) return;
+      $('#fiche-step').textContent = step + '…';
+      $('#fiche-bar').value = progress || 0;
+    });
+    if (token !== ficheToken) return;
+    $('#fiche-img').src = res.preview;
+    $('#fiche-text').textContent = res.text;
+    $('#fiche-raw').hidden = false;
+    setFicheFields(res.fields);
+    if (!res.recognized) {
+      const warn = $('#fiche-warning');
+      warn.hidden = false;
+      warn.textContent = "La fiche n'a pas été reconnue (photo floue, plusieurs fiches sur la même photo ?). Recopiez les informations à partir de la photo.";
+    }
+  } catch (err) {
+    if (token !== ficheToken) return;
+    console.error(err);
+    $('#fiche-img').src = objectUrl;
+    setFicheFields({ uncertain: new Set(Object.keys(FICHE_LABELS)) });
+    const warn = $('#fiche-warning');
+    warn.hidden = false;
+    warn.textContent = 'Lecture automatique impossible sur cet appareil. Recopiez les informations à partir de la photo.';
+  } finally {
+    if (token === ficheToken) {
+      $('#fiche-img').hidden = false;
+      setFicheBusy(false);
+      ficheForm.products.focus();
+    }
+  }
+}
+
+function nextFiche() {
+  ficheIndex++;
+  if (ficheIndex < ficheQueue.length) showFiche();
+  else { ficheToken++; ficheDialog.close(); ficheQueue = []; }
+}
+
+$('#fiche-skip').onclick = nextFiche;
+$('#fiche-img').onclick = (e) => e.target.classList.toggle('zoomed');
+$('#fiche-cancel').onclick = () => { ficheToken++; ficheDialog.close(); ficheQueue = []; };
+ficheForm.addEventListener('input', (e) => e.target.closest('[data-f]')?.classList.remove('to-check'));
+ficheForm.addEventListener('change', (e) => {
+  if (e.target.name === 'products' && !ficheForm.category.value) ficheForm.category.value = guessCategory(e.target.value);
+  if (e.target.name === 'tables' && !ficheForm.payment.value) ficheForm.payment.value = String(5 * (Number(e.target.value) || 1));
+});
+
+const normalizeKey = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9@.]/gi, '').toLowerCase();
+
+ficheForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const elec = $('input[name=electricity]:checked', ficheForm);
+  if (!elec) {
+    const fs = $('[data-f=electricity]', ficheForm);
+    fs.classList.add('to-check');
+    $('#fiche-warning').hidden = false;
+    $('#fiche-warning').textContent = 'Indiquez si l’exposant a besoin d’électricité (oui ou non).';
+    return;
+  }
+  const v = (k) => ficheForm[k].value.trim();
+  const firstName = v('firstName');
+  const lastName = v('lastName').toUpperCase();
+  const name = `${firstName} ${lastName}`.trim() || v('products') || 'Exposant';
+  const fields = {
+    name, firstName, lastName,
+    products: v('products'),
+    category: v('category') || guessCategory(v('products')),
+    tables: clamp(Math.round(Number(v('tables')) || 1), 1, 3),
+    grilles: clamp(Math.round(Number(v('grilles')) || 0), 0, 30),
+    electricity: elec.value === 'oui',
+    phone: v('phone'), email: v('email'), payment: v('payment'), notes: v('notes'),
+  };
+  const ev = cur();
+  const same = ev.exhibitors.find((x) =>
+    (fields.email && normalizeKey(x.email) === normalizeKey(fields.email))
+    || (fields.phone && normalizeKey(x.phone) === normalizeKey(fields.phone))
+    || normalizeKey(x.name) === normalizeKey(name));
+  let id;
+  if (same && confirm(`« ${same.name} » est déjà inscrit (même nom, téléphone ou e-mail).\n\nOK : mettre à jour sa fiche\nAnnuler : l'ajouter comme nouvel exposant`)) {
+    id = same.id;
+    commit((ev) => { Object.assign(exById(id, ev), fields); ensureCategoryColor(ev, fields.category); });
+  } else {
+    id = uid('ex');
+    commit((ev) => { ev.exhibitors.push(newExhibitor({ ...fields, id })); ensureCategoryColor(ev, fields.category); });
+  }
+  const auto = cur().settings.autoPlaceFiches !== false;
+  const sameSize = same && same.id === id && tablesOf(id).length === fields.tables;
+  if (auto && !(sameSize && !(evaluation.byExhibitor.get(id) || []).some((i) => i.severity === 'error'))) placeAndAdjust(id);
+  else toast(`${name} ${same && same.id === id ? 'mis à jour' : 'ajouté'}`, 'success');
+  nextFiche();
 });
 
 // ---------- Événements ----------
@@ -1202,10 +1396,10 @@ dataMenu.addEventListener('click', (e) => {
   if (act === 'import') $('#import-file').click();
   if (act === 'export-png') exportPNG();
   if (act === 'export-csv') {
-    const rows = [['Exposant', 'Catégorie', 'Tables demandées', 'Tables attribuées', 'Électricité', 'Emplacement souhaité', 'À séparer de', 'Contact', 'Notes']];
+    const rows = [['Exposant', 'Prénom', 'NOM', 'Objets vendus', 'Catégorie', 'Tables demandées', 'Tables attribuées', 'Grilles', 'Électricité', 'Règlement (€)', 'Téléphone', 'E-mail', 'Emplacement souhaité', 'À séparer de', 'Notes']];
     for (const ex of [...ev.exhibitors].sort((a, b) => a.name.localeCompare(b.name, 'fr'))) {
-      rows.push([ex.name, ex.category, ex.tables, tableNums(ex.id).join(' '), ex.electricity ? 'oui' : '', ex.zone ? regionLabel(ex.zone) : '',
-        (ex.avoid || []).map((id) => exById(id)?.name).filter(Boolean).join(', '), ex.contact, ex.notes]);
+      rows.push([ex.name, ex.firstName, ex.lastName, ex.products, ex.category, ex.tables, tableNums(ex.id).join(' '), ex.grilles || '', ex.electricity ? 'oui' : 'non', ex.payment,
+        ex.phone, ex.email, ex.zone ? regionLabel(ex.zone) : '', (ex.avoid || []).map((id) => exById(id)?.name).filter(Boolean).join(', '), ex.notes]);
     }
     const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
     download(`exposants-${slug(ev.name)}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
@@ -1482,8 +1676,8 @@ $('#btn-print').onclick = () => {
     <div class="print-page">
       <h2>Liste des exposants</h2>
       <table class="print-table">
-        <thead><tr><th>Table(s)</th><th>Exposant</th><th>Catégorie</th><th>⚡</th><th>Contact</th><th>Notes</th></tr></thead>
-        <tbody>${list.map((ex) => `<tr><td>${tableNums(ex.id).join(', ') || '—'}</td><td>${esc(ex.name)}</td><td>${esc(ex.category)}</td><td>${ex.electricity ? '⚡' : ''}</td><td>${esc(ex.contact)}</td><td>${esc(ex.notes)}</td></tr>`).join('')}</tbody>
+        <thead><tr><th>Table(s)</th><th>Exposant</th><th>Objets vendus</th><th>Grilles</th><th>⚡</th><th>Téléphone</th><th>Règl.</th><th>Notes</th></tr></thead>
+        <tbody>${list.map((ex) => `<tr><td>${tableNums(ex.id).join(', ') || '—'}</td><td>${esc(ex.name)}</td><td>${esc(ex.products || ex.category)}</td><td>${ex.grilles || ''}</td><td>${ex.electricity ? '⚡' : ''}</td><td>${esc(ex.phone)}</td><td>${ex.payment ? esc(ex.payment) + ' €' : ''}</td><td>${esc(ex.notes)}</td></tr>`).join('')}</tbody>
       </table>
     </div>`;
   window.print();

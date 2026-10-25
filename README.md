@@ -40,6 +40,28 @@ on place les exposants sur les tables en glisser-déposer, et l'outil vérifie
 Les données sont enregistrées dans le navigateur (localStorage). Pour partager
 un plan ou changer d'ordinateur : *Données → Exporter*, puis *Importer*.
 
+## Fiches d'inscription
+
+« 📷 Importer des fiches » : on photographie (ou on choisit) une ou plusieurs
+fiches d'inscription papier, **une fiche par photo**. L'outil :
+
+1. lit la fiche directement dans le navigateur (OCR Tesseract.js, fourni dans
+   `vendor/` : la photo n'est envoyée nulle part) et la remet à l'endroit ;
+2. pré-remplit objets vendus, nom, prénom, nombre de tables, grilles,
+   électricité, téléphone, e-mail et règlement, et propose une catégorie ;
+3. surligne en orange ce qu'il faut vérifier (l'écriture manuscrite n'est
+   jamais lue parfaitement) ;
+4. à la validation, ajoute l'exposant (ou met à jour sa fiche s'il existe déjà),
+   le place et réajuste le plan si nécessaire.
+
+« ✍ Saisir » permet de recopier une fiche à la main avec le même formulaire.
+
+## Données
+
+Aucune donnée ne quitte le navigateur : tout est enregistré en localStorage.
+Pour sauvegarder ou changer de poste, utiliser les exports/imports .json
+(événements ou plans) ; l'outil ne contient aucun serveur.
+
 ## Utilisation en local
 
 Aucune installation : il suffit de servir le dossier, par exemple

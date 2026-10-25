@@ -6,6 +6,8 @@ export const DEFAULT_SETTINGS = {
   nearDistance: 4, // distance souhaitée pour « proche de »
   adjacencyGap: 0.5, // écart max pour que deux tables soient contiguës
   flagSameCategory: true, // signaler deux exposants de même catégorie côte à côte
+  grillesAvailable: 0, // nombre de grilles disponibles (0 = non vérifié)
+  autoPlaceFiches: true, // placer automatiquement chaque nouvelle fiche
 };
 
 export const SEVERITY_RANK = { error: 3, warning: 2, info: 1 };
@@ -224,6 +226,12 @@ export function evaluate(ev) {
         });
       }
     }
+  }
+
+  const grilles = ev.exhibitors.reduce((sum, e) => sum + (Number(e.grilles) || 0), 0);
+  if (s.grillesAvailable > 0 && grilles > s.grillesAvailable) {
+    issues.push({ severity: 'warning', type: 'grilles', tables: [], exhibitors: [],
+      msg: `${grilles} grilles demandées pour ${s.grillesAvailable} disponibles` });
   }
 
   issues.sort((x, y) => SEVERITY_RANK[y.severity] - SEVERITY_RANK[x.severity]);

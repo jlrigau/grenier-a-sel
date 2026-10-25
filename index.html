@@ -61,7 +61,11 @@
 
       <section class="tab-panel" id="tab-exhibitors">
         <div class="panel-head">
-          <button class="btn primary block" id="btn-add-ex">+ Ajouter un exposant</button>
+          <div class="btn-row add-row">
+            <button class="btn primary" id="btn-fiches" title="Photographiez ou choisissez les photos des fiches d'inscription (une fiche par photo)">📷 Importer des fiches</button>
+            <button class="btn" id="btn-fiche-manual" title="Recopier une fiche papier à la main">✍ Saisir</button>
+            <button class="btn icon" id="btn-add-ex" title="Ajouter un exposant (formulaire complet)">+</button>
+          </div>
           <div class="btn-row">
             <button class="btn" id="btn-place-missing" title="Place les exposants non placés en déplaçant le moins possible les autres">Placer les non placés</button>
             <button class="btn" id="btn-optimize" title="Recalcule tout le plan (les exposants verrouillés restent en place)">Tout réorganiser</button>
@@ -147,10 +151,22 @@
           <div class="rel-list" data-rel="near"></div>
         </fieldset>
         <label class="check span2"><input type="checkbox" name="locked"> Verrouiller son emplacement (le placement automatique ne le déplacera pas)</label>
-        <label>Contact
-          <input name="contact" maxlength="120" placeholder="Téléphone, e-mail…">
+        <label class="span2">Objets vendus
+          <input name="products" maxlength="200">
         </label>
-        <label>Notes
+        <label>Nombre de grilles
+          <input name="grilles" type="number" min="0" max="30" step="1" value="0">
+        </label>
+        <label>Règlement (€)
+          <input name="payment" maxlength="10" inputmode="decimal">
+        </label>
+        <label>Téléphone
+          <input name="phone" maxlength="30" inputmode="tel">
+        </label>
+        <label>E-mail
+          <input name="email" maxlength="120" inputmode="email">
+        </label>
+        <label class="span2">Notes
           <input name="notes" maxlength="300">
         </label>
       </div>
@@ -163,6 +179,67 @@
       </div>
     </form>
   </dialog>
+
+  <dialog id="fiche-dialog" class="wide">
+    <form id="fiche-form" method="dialog" novalidate>
+      <div class="fiche-head">
+        <h2>Fiche d'inscription <span id="fiche-count" class="muted"></span></h2>
+        <span class="muted small">🔒 Lecture faite sur cet appareil : la photo n'est envoyée nulle part.</span>
+      </div>
+      <div class="fiche-body">
+        <div class="fiche-photo" id="fiche-photo">
+          <div class="fiche-progress" id="fiche-progress"><div class="spinner"></div><span id="fiche-step">Lecture de la fiche…</span><progress id="fiche-bar" max="1" value="0"></progress></div>
+          <img id="fiche-img" alt="Photo de la fiche" hidden>
+          <details id="fiche-raw" hidden><summary>Texte reconnu</summary><pre id="fiche-text"></pre></details>
+        </div>
+        <div class="form-grid fiche-fields">
+          <label class="span2" data-f="products">Objets vendus
+            <input name="products" maxlength="200" autocomplete="off">
+          </label>
+          <label data-f="firstName">Prénom
+            <input name="firstName" maxlength="40" autocomplete="off">
+          </label>
+          <label data-f="lastName">NOM
+            <input name="lastName" maxlength="40" autocomplete="off">
+          </label>
+          <label data-f="tables">Tables de 1,80 m (3 max)
+            <input name="tables" type="number" min="1" max="3" step="1" value="1">
+          </label>
+          <label data-f="grilles">Nombre de grilles
+            <input name="grilles" type="number" min="0" max="30" step="1" value="0">
+          </label>
+          <fieldset class="span2 elec-choice" data-f="electricity">
+            <legend>Électricité</legend>
+            <label><input type="radio" name="electricity" value="oui"> Oui</label>
+            <label><input type="radio" name="electricity" value="non"> Non</label>
+          </fieldset>
+          <label data-f="phone">Téléphone
+            <input name="phone" maxlength="30" inputmode="tel" autocomplete="off">
+          </label>
+          <label data-f="email">E-mail
+            <input name="email" maxlength="120" inputmode="email" autocomplete="off">
+          </label>
+          <label data-f="payment">Règlement (€)
+            <input name="payment" maxlength="10" inputmode="decimal" autocomplete="off">
+          </label>
+          <label data-f="category">Catégorie
+            <input name="category" list="category-list" maxlength="40" autocomplete="off">
+          </label>
+          <label class="span2">Notes
+            <input name="notes" maxlength="300" autocomplete="off">
+          </label>
+        </div>
+      </div>
+      <p class="fiche-warning" id="fiche-warning" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="fiche-skip">Ignorer cette fiche</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="fiche-cancel">Fermer</button>
+        <button type="submit" class="btn primary" id="fiche-add">Ajouter et placer</button>
+      </div>
+    </form>
+  </dialog>
+  <input type="file" id="fiche-files" accept="image/*" multiple hidden>
 
   <dialog id="event-dialog">
     <form id="event-form" method="dialog">
