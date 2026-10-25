@@ -76,9 +76,12 @@ un fichier Excel choisi à chaque modification, tant que l'outil est ouvert.
 
 ## Application installable
 
-L'outil est une PWA : bouton « 📲 Installer » (Android, Chrome, Edge) ou, sur
-iPhone/iPad, Safari → Partager → « Sur l'écran d'accueil ». Une fois installé,
-il fonctionne hors connexion, lecture des fiches comprise (`sw.js`).
+L'outil est une PWA. Sur téléphone, dans le navigateur, un bandeau en bas de
+l'écran propose de l'installer (« Plus tard » le masque une semaine) ; sur
+ordinateur, un bouton « Installer » apparaît dans l'en-tête quand le navigateur
+le permet. Sur iPhone/iPad : Safari → Partager → « Sur l'écran d'accueil ».
+Une fois installé, il fonctionne hors connexion, lecture des fiches comprise
+(`sw.js`). Le numéro de version est affiché en bas de chaque page.
 
 ## Données
 
