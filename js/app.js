@@ -27,6 +27,29 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const plural = (n, s, p = s + 's') => `${n} ${n > 1 ? p : s}`;
 // Écran tactile : on évite d'ouvrir le clavier tout seul à l'ouverture d'une fenêtre.
 const touchScreen = () => window.matchMedia('(pointer: coarse)').matches;
+// Champ où l'on tape au clavier (pas une case à cocher ni un bouton).
+const isTextField = (el) => !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
+  || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'file', 'range', 'color'].includes(el.type)));
+// Ne pas redessiner un panneau pendant qu'on y tape : remplacer le champ fermerait le clavier
+// (et le champ suivant touché disparaîtrait). Le panneau est redessiné quand on en sort.
+const deferredRenders = new Map();
+function typingIn(box, render) {
+  const a = document.activeElement;
+  // Une modification validée en quittant un champ du panneau (le champ suivant va prendre la main)
+  const fromField = window.event && window.event.type === 'change' && box.contains(window.event.target) && isTextField(window.event.target);
+  if (!fromField && !(box.contains(a) && isTextField(a))) return false;
+  deferredRenders.set(box, render);
+  setTimeout(flushDeferredRenders, 400);
+  return true;
+}
+function flushDeferredRenders() {
+  for (const [box, render] of deferredRenders) {
+    if (box.contains(document.activeElement) && isTextField(document.activeElement)) continue;
+    deferredRenders.delete(box);
+    render();
+  }
+}
+document.addEventListener('focusout', () => setTimeout(flushDeferredRenders, 0));
 const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) || $('dialog[open]');
 
 // ---------- Données ----------
@@ -507,6 +530,7 @@ function renderChecks() {
 }
 
 function renderSettings() {
+  if (typingIn($('#tab-settings'), renderSettings)) return;
   const ev = cur();
   const s = ev.settings;
   $('#tab-settings').innerHTML = `
@@ -688,6 +712,7 @@ function renderLegend() {
 
 function renderInspector() {
   const box = $('#inspector');
+  if (typingIn(box, renderInspector)) return;
   const ev = cur();
   const t = ui.selectedTable && tableById(ui.selectedTable);
   if (!t || ui.mode === 'power') { box.hidden = true; return; }
@@ -1804,6 +1829,7 @@ function renderPlanStatus() {
 $('#plan-status').onclick = () => { ui.tab = 'plans'; renderSidebar(); };
 
 function renderPlans() {
+  if (typingIn($('#tab-plans'), renderPlans)) return;
   const ev = cur();
   const act = activePlan(ev);
   const unsaved = isUnsaved(ev);
@@ -2114,8 +2140,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 // visible de l'écran (au-dessus du clavier), boutons compris. visualViewport donne cette zone visible.
 (function keyboardAware() {
   const root = document.documentElement;
-  const isField = (el) => el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
-    || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'file', 'range', 'color'].includes(el.type)));
+  const isField = isTextField;
   const vv = window.visualViewport;
   const update = () => {
     const typing = touchScreen() && isField(document.activeElement);
@@ -2136,30 +2161,22 @@ $('#install-close').onclick = () => $('#install-dialog').close();
   update();
 })();
 
-// App installée : quand on tire la page vers le bas tout en haut, iOS montre le fond de la page
-// au-dessus de l'en-tête. En haut de page, ce fond devient vert (comme l'en-tête) ; ailleurs il
-// reste crème pour que le bas de la page ne change pas.
+// App installée : quand on tire la page vers le bas tout en haut, iOS montre la couleur de fond
+// de la page au-dessus de l'en-tête. Cette couleur est verte sur la moitié haute de la page et
+// crème sur la moitié basse (le rebond du bas reste crème). Le changement se fait loin des bords,
+// donc jamais pendant un rebond : pas de scintillement.
 (function greenOverscroll() {
   const root = document.documentElement;
-  const topbar = $('.topbar');
   let frame = 0;
-  // Si l'en-tête est descendu (page tirée vers le bas, ou page laissée décalée par iOS après
-  // le clavier), la bande verte fixe du haut s'allonge jusqu'à lui : plus de vide crème.
   const update = () => {
     frame = 0;
-    root.classList.toggle('at-top', window.scrollY < 120);
-    const gap = Math.max(0, Math.round(topbar.getBoundingClientRect().top));
-    root.style.setProperty('--pull', `${gap}px`);
+    const max = Math.max(0, root.scrollHeight - window.innerHeight);
+    root.classList.toggle('at-top', window.scrollY < max / 2 || max < 40);
   };
   const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
   window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('touchmove', schedule, { passive: true });
-  window.addEventListener('touchend', () => setTimeout(schedule, 50), { passive: true });
   window.addEventListener('resize', schedule);
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', schedule);
-    window.visualViewport.addEventListener('scroll', schedule);
-  }
+  new ResizeObserver(schedule).observe(document.body);
   update();
 })();
 
