@@ -416,6 +416,7 @@ function renderSidebar() {
   renderStats();
   renderNav();
   renderTopAlert();
+  renderPage();
 }
 
 function exStatus(ex) {
@@ -1033,10 +1034,29 @@ $('#ex-filters').addEventListener('click', (e) => {
   const b = e.target.closest('[data-filter]');
   if (b) { ui.filter = b.dataset.filter; renderExhibitors(); }
 });
+// Sur téléphone, « Versions » et « Réglages » sont des pages à part (le reste est masqué) ;
+// le « retour » du téléphone ramène au plan.
+const SUB_PAGES = { plans: 'Versions', settings: 'Réglages' };
+const onSubPage = () => isPhone() && !!SUB_PAGES[ui.tab];
+function renderPage() {
+  const sub = onSubPage();
+  document.documentElement.classList.toggle('sub-page', sub);
+  $('#page-head').innerHTML = sub ? `<h1>${SUB_PAGES[ui.tab]}</h1><p class="muted">${esc(cur().name)}</p>` : '';
+}
 function showTab(tab) {
+  const wasSub = onSubPage();
   ui.tab = tab;
   renderSidebar();
-  if (isPhone()) $(tab === 'exhibitors' ? '#map-wrap' : '.sidebar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!isPhone()) return;
+  const sub = onSubPage();
+  if (sub) {
+    if (wasSub) history.replaceState({ page: tab }, ''); else history.pushState({ page: tab }, '');
+    window.scrollTo(0, 0);
+  } else {
+    if (wasSub && history.state && history.state.page) { ignoreNextPop = true; history.back(); }
+    if (wasSub) window.scrollTo(0, 0);
+    else $(tab === 'exhibitors' ? '#map-wrap' : '.sidebar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 const isPhone = () => window.matchMedia('(max-width: 900px)').matches;
 function onNav(e) {
@@ -2173,7 +2193,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v31';
+const APP_VERSION = 'v32';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;
@@ -2234,6 +2254,7 @@ HTMLDialogElement.prototype.showModal = function () {
 window.addEventListener('popstate', () => {
   if (ignoreNextPop) { ignoreNextPop = false; return; }
   const open = [...document.querySelectorAll('dialog[open]')].pop();
+  if (!open && onSubPage()) { ui.tab = 'exhibitors'; renderSidebar(); window.scrollTo(0, 0); return; }
   if (open) { closingFromHistory = true; cancelDialog(open); if (open.open) { closingFromHistory = false; history.pushState({ dialog: open.id }, ''); } }
 });
 

@@ -531,7 +531,7 @@ dialog.full[open] { display: flex; }
   .stat-ic { width: 38px; height: 38px; border-radius: 12px; }
   .stat b { font-size: 21px; }
   .stat span span { font-size: 12.5px; }
-  .layout { grid-template-columns: 1fr; padding: 12px 14px 20px; height: auto; min-height: 0; }
+  .layout { grid-template-columns: minmax(0, 1fr); padding: 12px 14px 20px; height: auto; min-height: 0; }
   .map-wrap { height: auto; padding: 14px 12px 10px; }
   .plan-frame { flex: none; height: 64vh; min-height: 380px; }
   .sidebar { overflow: visible; }
@@ -760,4 +760,14 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
     box-shadow: 0 14px 40px rgba(29, 51, 40, .28);
   }
   :root.green-head .menu-pop button { padding: 12px; }
+}
+
+/* Téléphone : « Versions » et « Réglages » en pages dédiées (seul le panneau est affiché). */
+.page-head { display: none; }
+@media (max-width: 900px) {
+  :root.sub-page .hero, :root.sub-page #stats-row, :root.sub-page #map-wrap,
+  :root.sub-page .sidebar > :not(.page-head):not(.tab-panel) { display: none !important; }
+  :root.sub-page .page-head { display: block; margin: 2px 0 12px; }
+  :root.sub-page .page-head h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+  :root.sub-page .page-head p { margin: 2px 0 0; }
 }
