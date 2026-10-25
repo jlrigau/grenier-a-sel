@@ -56,7 +56,8 @@ function normalizeEvent(ev) {
     return ex;
   });
   out.categoryColors = Object.fromEntries(Object.entries(ev.categoryColors || {}).map(([k, c]) => [k, migrateColor(c)]));
-  if (out.name === 'Exemple – Marché de Noël') { out.demo = true; out.name = 'Démonstration (données fictives)'; }
+  if (out.name === 'Exemple – Marché de Noël') out.demo = true;
+  if (out.demo && /^(Exemple – Marché de Noël|Démonstration \(données fictives\))$/.test(out.name)) out.name = 'Démonstration';
   if (out.demo) {
     const renamed = { 'Miel': 'Miel des Coteaux', 'Confitures': 'Rucher du Vexin', 'Crêpes': 'Crêpes de Mamie', 'Chocolats': 'Chocolaterie Martin', 'Bijoux': 'Bijoux Lune', 'Perles': 'Atelier Perles', 'Poterie': 'Poterie du Grès', 'Luminaires': 'Luminaires Récup', 'Bougies': 'Bougies & Cie', 'Couture': 'Couture Créative', 'Tricots': 'Tricots de Laine', 'Livres': 'Librairie Ambulante', 'Association': 'Club photo', 'Savons': 'Savonnerie du Val', 'Jouets en bois': 'Jouets en bois', 'Peintures': 'Atelier Aquarelle' };
     out.exhibitors.forEach((e) => { const m = e.name.match(/^(.*) \(démo\)$/); if (m && renamed[m[1]]) e.name = renamed[m[1]]; });
@@ -93,7 +94,7 @@ const DEMO_EXHIBITORS = [
 ];
 
 function makeDemoEvent() {
-  const ev = newEvent('Démonstration (données fictives)', '');
+  const ev = newEvent('Démonstration', '');
   ev.demo = true;
   const byName = {};
   for (const [name, category, products, tables, electricity, zone] of DEMO_EXHIBITORS) {
@@ -357,7 +358,7 @@ function renderStats() {
 
 function renderNav() {
   const map = { exhibitors: 'plan', checks: 'plan', plans: 'plans', settings: 'settings' };
-  $$('#main-nav [data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === map[ui.tab]));
+  $$('#main-nav [data-nav], #tabbar [data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === map[ui.tab]));
 }
 
 function renderTopAlert() {
@@ -998,14 +999,18 @@ $('#ex-filters').addEventListener('click', (e) => {
 function showTab(tab) {
   ui.tab = tab;
   renderSidebar();
-  if (window.matchMedia('(max-width: 900px)').matches) $('.sidebar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (isPhone()) $(tab === 'exhibitors' ? '#map-wrap' : '.sidebar').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-$('#main-nav').addEventListener('click', (e) => {
+const isPhone = () => window.matchMedia('(max-width: 900px)').matches;
+function onNav(e) {
   const b = e.target.closest('[data-nav]');
   if (!b) return;
   if (b.dataset.nav === 'list') { openList(); return; }
+  if (b.dataset.nav === 'fiches') { $('#fiche-files').click(); return; }
   showTab(b.dataset.nav === 'plan' ? 'exhibitors' : b.dataset.nav);
-});
+}
+$('#main-nav').addEventListener('click', onNav);
+$('#tabbar').addEventListener('click', onNav);
 $('#stats-row').addEventListener('click', (e) => {
   const act = e.target.closest('[data-stat]')?.dataset.stat;
   if (act === 'checks') showTab('checks');
@@ -2005,6 +2010,8 @@ fitView();
 // ---------- Application installable (PWA) ----------
 
 const standalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+// Mode application installée : l'en-tête passe sous la barre d'état du téléphone.
+document.documentElement.classList.toggle('standalone', standalone());
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let installPrompt = null;
 
