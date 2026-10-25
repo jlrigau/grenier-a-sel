@@ -966,3 +966,7 @@ details.advanced > summary { cursor: pointer; font-weight: 700; color: var(--ink
 /* Logo et nom : lien vers l'accueil */
 #brand { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 999px; }
 #brand:focus-visible { outline: 2px solid var(--mustard); outline-offset: 3px; }
+/* Téléphone : fond uni (sans halo jaune), identique au vide que l'iPhone montre pendant le rebond */
+@media (max-width: 900px) {
+  :root.green-head, :root.green-head body { background-color: var(--bg); background-image: none; }
+}
