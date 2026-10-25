@@ -1515,10 +1515,12 @@ function renderList() {
     <thead><tr>${LIST_COLUMNS.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''} ${listUi.sort === c.key ? 'sorted' : ''}">${esc(c.label)}${listUi.sort === c.key ? (listUi.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead>
     <tbody>${exs.map((ex) => `<tr data-ex="${ex.id}">${LIST_COLUMNS.map((c) => {
       const v = c.get(ex);
-      if (c.key === 'electricity') return `<td>${ex.electricity ? `<span class="elec">${ic('zap', 'i-sm')}</span> oui` : '<span class="muted">non</span>'}</td>`;
-      if (c.key === 'lastName') return `<td><span class="dot" style="background:${colorFor(ex)}"></span> <b>${esc(v)}</b></td>`;
-      if (c.key === 'tablesNums') return `<td>${v ? esc(v) : '<span class="warn-text">non placé</span>'}</td>`;
-      return `<td class="${c.num ? 'num' : ''}">${esc(v === 0 && c.key === 'grilles' ? '' : v)}</td>`;
+      const lab = `data-label="${esc(c.label)}"`;
+      if (c.key === 'electricity') return `<td ${lab} class="${ex.electricity ? '' : 'empty'}">${ex.electricity ? `<span class="elec">${ic('zap', 'i-sm')}</span> oui` : '<span class="muted">non</span>'}</td>`;
+      if (c.key === 'lastName') return `<td ${lab} class="name"><span class="dot" style="background:${colorFor(ex)}"></span> <b>${esc(v)}</b></td>`;
+      if (c.key === 'tablesNums') return `<td ${lab} class="tables">${v ? esc(v) : '<span class="warn-text">non placé</span>'}</td>`;
+      const shown = v === 0 && c.key === 'grilles' ? '' : v;
+      return `<td ${lab} class="${c.num ? 'num' : ''} ${shown === '' || shown == null ? 'empty' : ''}">${esc(shown)}</td>`;
     }).join('')}</tr>`).join('') || `<tr><td colspan="${LIST_COLUMNS.length}" class="muted">Aucun exposant.</td></tr>`}</tbody>
     <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(ev.exhibitors.length, 'exposant')}</td><td class="num"><b>${totals.tables}</b></td><td class="num"><b>${totals.grilles}</b></td><td><b>${totals.elec}</b> oui</td><td class="num"><b>${totals.pay}</b> €</td><td colspan="${LIST_COLUMNS.length - 9}"></td></tr></tfoot>`;
   renderListStatus();
