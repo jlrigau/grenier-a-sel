@@ -3,7 +3,7 @@
 
 const SECTIONS = [
   ['Démarrer', `
-    <p>Chaque marché est un <b>événement</b>. Touchez le <b>titre de l'événement</b> en haut de la page pour passer à un autre événement ou en créer un (<b>+ Nouvel événement</b>).</p>
+    <p>Chaque marché, brocante ou salon est un <b>événement</b>. Touchez le <b>titre de l'événement</b> en haut de la page pour passer à un autre événement ou en créer un (<b>+ Nouvel événement</b>).</p>
     <p>L'événement « Démonstration » contient des exposants imaginaires : essayez tout dessus, puis supprimez-le dans Réglages si besoin.</p>
     <p>Une erreur ? Les flèches <b>Annuler</b> et <b>Rétablir</b> de l'en-tête reviennent en arrière.</p>`],
   ['Ajouter des exposants', `
@@ -38,7 +38,7 @@ const SECTIONS = [
     <p>La page <b>Liste</b> regroupe toutes les informations des exposants : recherche, export <b>Excel</b> ou <b>CSV</b>, impression. Un <b>!</b> sur l'onglet Liste signale qu'elle a changé depuis le dernier export.</p>`],
   ['Versions', `
     <p>Une <b>version</b> garde la disposition des tables et la place de chaque exposant, pour comparer plusieurs plans ou revenir en arrière. La liste des exposants, elle, reste toujours à jour : en ouvrant une version, les nouveaux inscrits apparaissent « à placer ».</p>`],
-  ['Le jour du marché', `
+  ["Le jour de l'événement", `
     <p>Onglet <b>Jour J</b> (à côté d'Exposants et Contrôles) : la liste par numéro de table, une case <b>arrivé</b> pour chaque exposant, la recherche (nom ou numéro de table) et l'appel en un geste. On y imprime aussi les <b>étiquettes de table</b> et le <b>plan d'entrée</b> avec l'index des exposants.</p>`],
   ['Sauvegarder et partager', `
     <p><b>Tout est enregistré uniquement sur cet appareil.</b> S'il est perdu ou changé, les données sont perdues : sauvegardez régulièrement (un rappel apparaît sous le titre quand c'est nécessaire).</p>
