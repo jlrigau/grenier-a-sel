@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plans · Grenier à Sel</title>
+  <meta name="description" content="Outil de plans d'exposants pour la salle du Grenier à Sel de Gainneville">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23234e70'/%3E%3Crect x='6' y='8' width='9' height='5' fill='%23fbd38d'/%3E%3Crect x='17' y='8' width='9' height='5' fill='%2390cdf4'/%3E%3Crect x='6' y='19' width='20' height='5' fill='%239ae6b4'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <svg id="svg-defs" width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+      <pattern id="hatch" width="0.35" height="0.35" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="0.35" stroke="#c9c4b8" stroke-width="0.08"/>
+      </pattern>
+      <pattern id="hatch-red" width="0.4" height="0.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="0.4" stroke="#f3a5a5" stroke-width="0.07"/>
+      </pattern>
+    </defs>
+  </svg>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <strong>Grenier à Sel</strong>
+        <small>Plans d'événements · Gainneville</small>
+      </div>
+    </div>
+    <div class="event-picker">
+      <label for="event-select" class="sr-only">Événement</label>
+      <select id="event-select"></select>
+      <button id="btn-new-event" class="btn">+ Événement</button>
+    </div>
+    <div class="top-actions">
+      <button id="btn-undo" class="btn icon" title="Annuler (Ctrl+Z)">↶</button>
+      <button id="btn-redo" class="btn icon" title="Rétablir (Ctrl+Y)">↷</button>
+      <div class="menu">
+        <button class="btn" id="btn-data-menu">Données ▾</button>
+        <div class="menu-pop" id="data-menu" hidden>
+          <button data-action="export-event">Exporter cet événement (.json)</button>
+          <button data-action="export-all">Exporter tous les événements (.json)</button>
+          <button data-action="import">Importer un fichier .json…</button>
+          <button data-action="export-csv">Liste des exposants (.csv)</button>
+        </div>
+      </div>
+      <button id="btn-print" class="btn">Imprimer</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="exhibitors" class="active">Exposants</button>
+        <button role="tab" data-tab="checks">Contrôles <span id="checks-badge" class="badge"></span></button>
+        <button role="tab" data-tab="settings">Réglages</button>
+      </nav>
+
+      <section class="tab-panel" id="tab-exhibitors">
+        <div class="panel-head">
+          <button class="btn primary block" id="btn-add-ex">+ Ajouter un exposant</button>
+          <div class="btn-row">
+            <button class="btn" id="btn-place-missing" title="Place les exposants non placés en déplaçant le moins possible les autres">Placer les non placés</button>
+            <button class="btn" id="btn-optimize" title="Recalcule tout le plan (les exposants verrouillés restent en place)">Tout réorganiser</button>
+          </div>
+          <input type="search" id="ex-search" placeholder="Rechercher un exposant…" autocomplete="off">
+          <div class="chips" id="ex-filters">
+            <button data-filter="all" class="active">Tous</button>
+            <button data-filter="unplaced">Non placés</button>
+            <button data-filter="issues">Problèmes</button>
+          </div>
+          <div class="stats" id="ex-stats"></div>
+        </div>
+        <ul class="ex-list" id="ex-list"></ul>
+      </section>
+
+      <section class="tab-panel" id="tab-checks" hidden></section>
+      <section class="tab-panel" id="tab-settings" hidden></section>
+    </aside>
+
+    <section class="map-wrap" id="map-wrap">
+      <div class="map-toolbar">
+        <div class="segmented" id="mode-switch">
+          <button data-mode="place" class="active" title="Attribuer les tables aux exposants">Placement</button>
+          <button data-mode="layout" title="Déplacer, ajouter, pivoter des tables">Tables</button>
+          <button data-mode="outlets" title="Positionner les prises électriques">Prises ⚡</button>
+        </div>
+        <div class="toolbar-extra" id="toolbar-extra"></div>
+        <div class="zoom">
+          <button class="btn icon" id="zoom-out" title="Dézoomer">−</button>
+          <button class="btn icon" id="zoom-fit" title="Ajuster à l'écran">⤢</button>
+          <button class="btn icon" id="zoom-in" title="Zoomer">+</button>
+        </div>
+      </div>
+      <div class="mode-hint" id="mode-hint"></div>
+      <div class="notice" id="notice" hidden>
+        Plan reconstitué d'après le plan papier : les cotes sont approximatives et
+        <b>la position des prises électriques est à vérifier</b> (mode « Prises »).
+        <button class="link" id="notice-close">Compris</button>
+      </div>
+      <svg id="plan" xmlns="http://www.w3.org/2000/svg">
+        <g id="viewport">
+          <g id="room-layer"></g>
+          <g id="outlet-radius-layer"></g>
+          <g id="table-layer"></g>
+          <g id="outlet-layer"></g>
+        </g>
+      </svg>
+      <div class="inspector" id="inspector" hidden></div>
+      <div class="legend" id="legend"></div>
+    </section>
+  </main>
+
+  <div id="toasts" aria-live="polite"></div>
+  <div id="ghost" hidden></div>
+  <div id="busy" hidden><div class="spinner"></div><span>Calcul du plan…</span></div>
+
+  <dialog id="ex-dialog">
+    <form id="ex-form" method="dialog">
+      <h2 id="ex-dialog-title">Exposant</h2>
+      <div class="form-grid">
+        <label class="span2">Nom de l'exposant *
+          <input name="name" required maxlength="80" autocomplete="off">
+        </label>
+        <label>Catégorie / activité
+          <input name="category" list="category-list" maxlength="40" autocomplete="off" placeholder="ex. Bijoux, Alimentation…">
+          <datalist id="category-list"></datalist>
+        </label>
+        <label>Nombre de tables
+          <input name="tables" type="number" min="1" max="8" step="1" value="1">
+        </label>
+        <label class="check span2"><input type="checkbox" name="electricity"> A besoin d'électricité (prise à proximité)</label>
+        <label class="span2">Emplacement souhaité
+          <select name="zone"></select>
+        </label>
+        <fieldset class="span2 relation">
+          <legend>Ne pas placer à côté de</legend>
+          <input type="search" class="rel-search" data-rel="avoid" placeholder="Filtrer…">
+          <div class="rel-list" data-rel="avoid"></div>
+        </fieldset>
+        <fieldset class="span2 relation">
+          <legend>Souhaite être proche de</legend>
+          <input type="search" class="rel-search" data-rel="near" placeholder="Filtrer…">
+          <div class="rel-list" data-rel="near"></div>
+        </fieldset>
+        <label class="check span2"><input type="checkbox" name="locked"> Verrouiller son emplacement (le placement automatique ne le déplacera pas)</label>
+        <label>Contact
+          <input name="contact" maxlength="120" placeholder="Téléphone, e-mail…">
+        </label>
+        <label>Notes
+          <input name="notes" maxlength="300">
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn danger" id="ex-delete">Supprimer</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="ex-cancel">Annuler</button>
+        <button type="submit" class="btn" value="save" id="ex-save">Enregistrer</button>
+        <button type="submit" class="btn primary" value="place" id="ex-save-place">Enregistrer et placer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="event-dialog">
+    <form id="event-form" method="dialog">
+      <h2>Nouvel événement</h2>
+      <div class="form-grid">
+        <label class="span2">Nom *
+          <input name="name" required maxlength="80" placeholder="ex. Marché de Noël 2026">
+        </label>
+        <label>Date
+          <input name="date" type="date">
+        </label>
+        <label>Point de départ
+          <select name="base">
+            <option value="default">Plan type (48 tables)</option>
+            <option value="tables">Tables de l'événement actuel</option>
+            <option value="exhibitors">Tables + exposants de l'événement actuel (non placés)</option>
+            <option value="copy">Copie complète de l'événement actuel</option>
+          </select>
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="event-cancel">Annuler</button>
+        <button type="submit" class="btn primary" value="create">Créer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input type="file" id="import-file" accept=".json,application/json" hidden>
+  <div id="print-area"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
