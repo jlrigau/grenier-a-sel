@@ -4,6 +4,12 @@ Outil web pour préparer les plans d'exposants de la salle du Grenier à Sel :
 on place les exposants sur les tables en glisser-déposer, et l'outil vérifie
 (et sait résoudre automatiquement) les contraintes de la salle et des exposants.
 
+**👉 Ouvrir l'application : https://jlrigau.github.io/grenier-a-sel/**
+
+Elle s'utilise directement dans le navigateur (ordinateur, tablette ou
+téléphone) et peut être installée sur l'écran d'accueil. Aucune donnée
+n'est envoyée en ligne : tout reste sur l'appareil.
+
 ## Fonctionnalités
 
 - **Plan de la salle** reconstitué d'après le plan papier : grande salle, scène,
