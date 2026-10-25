@@ -25,6 +25,8 @@ const r2 = (v) => Math.round(v * 100) / 100;
 const snap = (v) => Math.round(v / SNAP) * SNAP;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const plural = (n, s, p = s + 's') => `${n} ${n > 1 ? p : s}`;
+// Écran tactile : on évite d'ouvrir le clavier tout seul à l'ouverture d'une fenêtre.
+const touchScreen = () => window.matchMedia('(pointer: coarse)').matches;
 const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) || $('dialog[open]');
 
 // ---------- Données ----------
@@ -1209,7 +1211,7 @@ function openExhibitorDialog(id) {
   $('#ex-delete').hidden = !id;
   $('#ex-save-place').textContent = id && tablesOf(id).length ? 'Enregistrer et replacer' : 'Enregistrer et placer';
   exDialog.showModal();
-  exForm.name.focus();
+  if (!touchScreen()) exForm.name.focus();
 }
 
 function renderRelations() {
@@ -1339,7 +1341,7 @@ async function showFiche() {
   $('#fiche-add').textContent = ficheIndex < ficheQueue.length - 1 ? 'Ajouter et fiche suivante' : 'Ajouter et placer';
   $('#fiche-skip').hidden = ficheQueue.length < 2;
   if (!ficheDialog.open) ficheDialog.showModal();
-  if (!file) { ficheForm.products.focus(); return; }
+  if (!file) { if (!touchScreen()) ficheForm.products.focus(); return; }
 
   setFicheBusy(true);
   $('#fiche-bar').value = 0;
@@ -1373,7 +1375,7 @@ async function showFiche() {
     if (token === ficheToken) {
       $('#fiche-img').hidden = false;
       setFicheBusy(false);
-      ficheForm.products.focus();
+      if (!touchScreen()) ficheForm.products.focus();
     }
   }
 }
@@ -2106,6 +2108,42 @@ $('#btn-install').onclick = async () => {
   $('#install-dialog').showModal();
 };
 $('#install-close').onclick = () => $('#install-dialog').close();
+
+// ---------- Fenêtres : fermeture facile ----------
+// Chaque fenêtre se ferme par sa croix, en touchant à côté, avec Échap ou avec le « retour »
+// du téléphone (Android, ou geste retour) : on passe par son bouton d'annulation habituel.
+const DIALOG_CANCEL = { 'ex-dialog': '#ex-cancel', 'fiche-dialog': '#fiche-cancel', 'event-dialog': '#event-cancel', 'install-dialog': '#install-close', 'list-dialog': '[data-list=close]' };
+function cancelDialog(dlg) {
+  const btn = DIALOG_CANCEL[dlg.id] && $(DIALOG_CANCEL[dlg.id], dlg);
+  if (btn) btn.click(); else dlg.close();
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-close]')) { cancelDialog(e.target.closest('dialog')); return; }
+  // Toucher le fond grisé autour de la fenêtre
+  if (e.target.tagName === 'DIALOG') {
+    const r = e.target.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) cancelDialog(e.target);
+  }
+});
+document.addEventListener('cancel', (e) => { if (e.target.tagName === 'DIALOG') { e.preventDefault(); cancelDialog(e.target); } }, true);
+
+// Bouton « retour » : chaque fenêtre ouverte ajoute une étape dans l'historique.
+let closingFromHistory = false;
+let ignoreNextPop = false;
+const showModal = HTMLDialogElement.prototype.showModal;
+HTMLDialogElement.prototype.showModal = function () {
+  showModal.call(this);
+  history.pushState({ dialog: this.id }, '');
+  this.addEventListener('close', () => {
+    if (closingFromHistory) { closingFromHistory = false; return; }
+    if (history.state && history.state.dialog === this.id) { ignoreNextPop = true; history.back(); }
+  }, { once: true });
+};
+window.addEventListener('popstate', () => {
+  if (ignoreNextPop) { ignoreNextPop = false; return; }
+  const open = [...document.querySelectorAll('dialog[open]')].pop();
+  if (open) { closingFromHistory = true; cancelDialog(open); if (open.open) { closingFromHistory = false; history.pushState({ dialog: open.id }, ''); } }
+});
 
 // Accès pour le débogage depuis la console.
 window.grenier = { get event() { return cur(); }, evaluate: () => evaluate(cur()) };
