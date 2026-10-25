@@ -460,7 +460,6 @@ function renderExhibitors() {
     .map((ex) => ({ ex, st: exStatus(ex) }))
     .filter(({ ex, st }) => {
       if (q && !`${ex.name} ${ex.category} ${ex.products} ${ex.phone} ${ex.email} ${ex.notes}`.toLowerCase().includes(q)) return false;
-      if (ui.filter === 'waitlist') return !!ex.waitlist;
       if (ui.filter === 'unpaid') return ex.paymentStatus !== 'paid';
       if (ex.waitlist) return ui.filter === 'all';
       if (ui.filter === 'unplaced') return !st.placed;
@@ -478,7 +477,7 @@ function renderExhibitors() {
     list.innerHTML = `<li class="empty">Aucun exposant ne correspond.</li>`;
     return;
   }
-  list.innerHTML = items.map(({ ex, st }) => {
+  const row = ({ ex, st }) => {
     const nums = tableNums(ex.id);
     const selected = ui.selectedEx === ex.id;
     const icon = ex.waitlist ? `<span class="st st-unplaced" title="Liste d'attente">${ic('clock')}</span>`
@@ -499,7 +498,7 @@ function renderExhibitors() {
       if (ex.grilles) rows.push(`<div><span class="k">Grilles</span> ${ex.grilles}</div>`);
       if (ex.phone) rows.push(`<div><span class="k">Téléphone</span> <a href="tel:${esc(ex.phone.replace(/\s/g, ''))}">${esc(ex.phone)}</a></div>`);
       if (ex.email) rows.push(`<div><span class="k">E-mail</span> <a href="mailto:${esc(ex.email)}">${esc(ex.email)}</a></div>`);
-      if (ex.payment || ex.paymentStatus) rows.push(`<div><span class="k">Règlement</span> ${ex.payment ? esc(ex.payment) + ' € · ' : ''}${payLabel(ex)}</div>`);
+      if (ex.payment || ex.paymentStatus) rows.push(`<div><span class="k">Règlement</span> ${[ex.payment ? esc(ex.payment) + ' €' : '', payLabel(ex)].filter(Boolean).join(' · ')}</div>`);
       if (ex.confirmed) rows.push(`<div><span class="k">Confirmation</span> envoyée</div>`);
       if (ex.prefTables?.length) rows.push(`<div><span class="k">Place précédente</span> table ${ex.prefTables.join(' + ')}</div>`);
       if (ex.notes) rows.push(`<div><span class="k">Notes</span> ${esc(ex.notes)}</div>`);
@@ -528,7 +527,11 @@ function renderExhibitors() {
       <button class="icon-btn" data-edit="${ex.id}" title="Modifier">${ic('pen')}</button>
       ${detail}
     </li>`;
-  }).join('');
+  };
+  // Liste d'attente : à part, sous les exposants qui ont (ou attendent) une table.
+  const waiting = items.filter(({ ex }) => ex.waitlist);
+  list.innerHTML = items.filter(({ ex }) => !ex.waitlist).map(row).join('')
+    + (waiting.length ? `<li class="ex-section" id="waitlist-section">${ic('clock', 'i-sm')} Liste d'attente (${waiting.length})</li>${waiting.map(row).join('')}` : '');
 }
 
 function renderChecks() {
@@ -1135,7 +1138,11 @@ $('#tabbar').addEventListener('click', onNav);
 $('#stats-row').addEventListener('click', (e) => {
   const act = e.target.closest('[data-stat]')?.dataset.stat;
   if (act === 'checks') showTab('checks');
-  if (e.target.closest('[data-waitlist]')) { ui.filter = 'waitlist'; ui.tab = 'exhibitors'; renderSidebar(); $('#ex-filters').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (e.target.closest('[data-waitlist]')) {
+    ui.filter = 'all'; ui.tab = 'exhibitors'; renderSidebar();
+    $('#waitlist-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   if (act === 'unplaced') { ui.filter = 'unplaced'; showTab('exhibitors'); }
   if (act === 'power') { ui.mode = 'power'; refresh(); }
 });
@@ -1618,6 +1625,7 @@ function sortedExhibitors(ev = cur()) {
   const col = LIST_COLUMNS.find((c) => c.key === listUi.sort) || LIST_COLUMNS[1];
   const key = col.sort || col.get;
   return [...ev.exhibitors].sort((a, b) => {
+    if (!!a.waitlist !== !!b.waitlist) return a.waitlist ? 1 : -1; // liste d'attente à la fin
     const x = key(a), y = key(b);
     const r = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'fr', { numeric: true });
     return r * listUi.dir || a.name.localeCompare(b.name, 'fr');
@@ -1625,7 +1633,7 @@ function sortedExhibitors(ev = cur()) {
 }
 
 function listRows(ev = cur()) {
-  const exs = [...ev.exhibitors].sort((a, b) => (a.lastName || a.name).localeCompare(b.lastName || b.name, 'fr'));
+  const exs = [...ev.exhibitors].sort((a, b) => (!!a.waitlist - !!b.waitlist) || (a.lastName || a.name).localeCompare(b.lastName || b.name, 'fr'));
   return [LIST_COLUMNS.map((c) => c.label), ...exs.map((ex) => LIST_COLUMNS.map((c) => c.get(ex)))];
 }
 
@@ -1666,16 +1674,17 @@ function renderList() {
   const ev = cur();
   const q = listUi.search.trim().toLowerCase();
   const exs = sortedExhibitors(ev).filter((ex) => !q || LIST_COLUMNS.map((c) => c.get(ex)).join(' ').toLowerCase().includes(q));
+  const active = activeExhibitors(ev);
   const totals = {
-    tables: ev.exhibitors.reduce((s, e) => s + (Number(e.tables) || 1), 0),
-    grilles: ev.exhibitors.reduce((s, e) => s + (Number(e.grilles) || 0), 0),
-    elec: ev.exhibitors.filter((e) => e.electricity).length,
+    tables: active.reduce((s, e) => s + (Number(e.tables) || 1), 0),
+    grilles: active.reduce((s, e) => s + (Number(e.grilles) || 0), 0),
+    elec: active.filter((e) => e.electricity).length,
     pay: ev.exhibitors.reduce((s, e) => s + (Number(String(e.payment || '').replace(',', '.')) || 0), 0),
   };
   $('#list-count').textContent = `(${ev.exhibitors.length})`;
   $('#list-table').innerHTML = `
     <thead><tr>${LIST_COLUMNS.map((c) => `<th data-sort="${c.key}" class="${c.num ? 'num' : ''} ${listUi.sort === c.key ? 'sorted' : ''}">${esc(c.label)}${listUi.sort === c.key ? (listUi.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead>
-    <tbody>${exs.map((ex) => `<tr data-ex="${ex.id}">${LIST_COLUMNS.map((c) => {
+    <tbody>${exs.map((ex, i) => `${ex.waitlist && !exs[i - 1]?.waitlist ? `<tr class="list-sep"><td colspan="${LIST_COLUMNS.length}">${ic('clock', 'i-sm')} Liste d'attente (${exs.filter((x) => x.waitlist).length})</td></tr>` : ''}<tr data-ex="${ex.id}">${LIST_COLUMNS.map((c) => {
       const v = c.get(ex);
       const lab = `data-label="${esc(c.label)}"`;
       if (c.key === 'electricity') return `<td ${lab} class="${ex.electricity ? '' : 'empty'}">${ex.electricity ? `<span class="elec">${ic('zap', 'i-sm')}</span> oui` : '<span class="muted">non</span>'}</td>`;
@@ -1684,7 +1693,7 @@ function renderList() {
       const shown = v === 0 && c.key === 'grilles' ? '' : v;
       return `<td ${lab} class="${c.num ? 'num' : ''} ${shown === '' || shown == null ? 'empty' : ''}">${esc(shown)}</td>`;
     }).join('')}</tr>`).join('') || `<tr><td colspan="${LIST_COLUMNS.length}" class="muted">Aucun exposant.</td></tr>`}</tbody>
-    <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(ev.exhibitors.length, 'exposant')}</td><td class="num"><b>${totals.tables}</b></td><td class="num"><b>${totals.grilles}</b></td><td><b>${totals.elec}</b> oui</td><td class="num"><b>${totals.pay}</b> €</td><td><b>${ev.exhibitors.filter((x) => x.paymentStatus === 'paid').length}</b> payés</td><td colspan="${LIST_COLUMNS.length - 10}"></td></tr></tfoot>`;
+    <tfoot><tr><td colspan="5"><b>Total</b> : ${plural(active.length, 'exposant')}${active.length < ev.exhibitors.length ? ` (+ ${ev.exhibitors.length - active.length} en attente)` : ''}</td><td class="num"><b>${totals.tables}</b> tables</td><td class="num"><b>${totals.grilles}</b> grilles</td><td><b>${totals.elec}</b> avec électricité</td><td class="num"><b>${totals.pay}</b> €</td><td><b>${ev.exhibitors.filter((x) => x.paymentStatus === 'paid').length}</b> payés</td><td colspan="${LIST_COLUMNS.length - 10}"></td></tr></tfoot>`;
   renderListStatus();
 }
 
@@ -2416,7 +2425,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v54';
+const APP_VERSION = 'v55';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------

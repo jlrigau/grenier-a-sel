@@ -971,3 +971,16 @@ details.advanced > summary { cursor: pointer; font-weight: 700; color: var(--ink
   :root.green-head, :root.green-head body { background-color: var(--bg); background-image: none; }
 }
 .stat-wait { display: block; font-weight: 700; color: var(--mustard-ink); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Liste d'attente : section à part, sous les autres exposants */
+.ex-section { list-style: none; margin: 14px 0 4px; padding: 8px 4px 4px; border-top: 1px solid var(--border); font-weight: 800; color: var(--mustard-ink); display: flex; align-items: center; gap: 6px; }
+.list-table tr.list-sep td { background: var(--mustard-soft) !important; color: var(--mustard-ink); font-weight: 800; padding: 8px 12px; }
+@media (max-width: 900px) {
+  .list-table tbody tr.list-sep { background: none; padding: 10px 4px 2px; margin: 6px 0 2px; }
+  .list-table tr.list-sep td { background: none !important; display: flex; justify-content: flex-start; gap: 6px; }
+  .list-table tr.list-sep td::before { display: none; }
+}
+@media (max-width: 900px) {
+  .list-table tfoot td { padding: 4px 12px 4px 0; }
+  .list-table tfoot td:first-child { display: flex; width: 100%; padding-bottom: 6px; }
+}
