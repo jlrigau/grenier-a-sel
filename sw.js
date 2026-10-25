@@ -1,21 +1,15 @@
 // Service worker : permet d'installer l'outil et de l'utiliser sans connexion.
 // Aucune donnée d'exposant ne passe ici : elles restent dans le navigateur (localStorage).
-const VERSION = 'v42';
+const VERSION = 'v43';
 const SHELL = `grenier-shell-${VERSION}`;
 const OCR = 'grenier-ocr-v1'; // moteur de lecture des fiches (gros fichiers qui ne changent pas)
 
 const SHELL_FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
-  'js/app.js', 'js/engine.js', 'js/room.js', 'js/fiches.js', 'js/xlsx.js',
+  'js/app.js', 'js/engine.js', 'js/room.js', 'js/fiches.js', 'js/xlsx.js', 'js/code.js',
+  'inscription.html', 'js/inscription.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png',
   'vendor/fonts/outfit-latin-wght-normal.woff2', 'vendor/fonts/outfit-latin-ext-wght-normal.woff2', 'icons/logo.svg',
-];
-const OCR_FILES = [
-  'vendor/tesseract/tesseract.min.js', 'vendor/tesseract/worker.min.js',
-  'vendor/tesseract/core/tesseract-core-lstm.wasm.js',
-  'vendor/tesseract/core/tesseract-core-simd-lstm.wasm.js',
-  'vendor/tesseract/core/tesseract-core-relaxedsimd-lstm.wasm.js',
-  'vendor/tesseract/lang/fra.traineddata.gz',
 ];
 
 self.addEventListener('install', (event) => {
@@ -27,10 +21,8 @@ self.addEventListener('activate', (event) => {
     for (const key of await caches.keys()) if (key !== SHELL && key !== OCR) await caches.delete(key);
     await self.clients.claim();
   })());
-  // Le moteur de lecture est mis en cache en arrière-plan pour fonctionner hors connexion.
-  caches.open(OCR).then(async (c) => {
-    for (const f of OCR_FILES) if (!(await c.match(f))) await c.add(f).catch(() => {});
-  });
+  // Le moteur de lecture des photos (plusieurs Mo) n'est plus téléchargé d'avance : il est mis en
+  // cache à sa première utilisation (voir « /vendor/ » ci-dessous), puis marche hors connexion.
 });
 
 self.addEventListener('fetch', (event) => {

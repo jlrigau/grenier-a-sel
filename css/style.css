@@ -894,3 +894,7 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
   .entrance-index li { padding: 1.2mm 0; border-bottom: 1px solid #eee5d3; }
   .entrance-index b { display: inline-block; min-width: 9mm; color: #2d6a4f; }
 }
+
+#paste-text { width: 100%; box-sizing: border-box; margin-top: 10px; font-size: 14px; }
+#tab-settings label:has([data-org]) { display: grid; gap: 4px; margin-bottom: 8px; }
+.fiche-tip { margin: 6px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--sky-soft, #e3eef8); color: var(--ink-2); font-size: 13px; width: 100%; }

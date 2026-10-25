@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2d6a4f">
+  <title>Inscription exposant · Grenier à Sel</title>
+  <link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { display: block; padding: 0 0 40px; }
+    .reg-head { background: var(--green); color: #fff; padding: calc(env(safe-area-inset-top) + 18px) 20px 22px; border-radius: 0 0 26px 26px; }
+    .reg-head .brand { color: #fff; gap: 10px; }
+    .reg-head .brand img { width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, .2); }
+    .reg-head .brand b { font-size: 18px; }
+    .reg-head h1 { margin: 16px 0 2px; font-size: 26px; line-height: 1.15; letter-spacing: -.02em; }
+    .reg-head p { margin: 0; opacity: .85; }
+    .reg-wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+    .reg-card { background: #fff; border-radius: 24px; box-shadow: var(--shadow-card); padding: 18px; margin-top: 16px; }
+    .reg-card h2 { margin: 0 0 4px; font-size: 19px; }
+    .reg-form { display: grid; gap: 12px; margin-top: 12px; }
+    .reg-form label { display: grid; gap: 5px; font-weight: 600; font-size: 14px; color: var(--ink-2); }
+    .reg-form input:not([type=radio]), .reg-form textarea { width: 100%; box-sizing: border-box; font-size: 16px; }
+    .reg-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+    .reg-choice { display: flex; gap: 8px; }
+    .reg-label { margin: 0 0 5px; font-weight: 600; font-size: 14px; color: var(--ink-2); }
+    .reg-form .reg-choice label { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid var(--border-strong); border-radius: 14px; padding: 10px; cursor: pointer; font-size: 15px; color: var(--ink); }
+    .reg-form .reg-choice label:has(input:checked) { border-color: var(--green); background: var(--green-soft); }
+    .reg-note { font-size: 13px; color: var(--ink-3); margin: 6px 0 0; }
+    .reg-send { display: grid; gap: 8px; margin-top: 12px; }
+    .reg-send .btn { height: 48px; font-size: 16px; justify-content: center; }
+    .reg-recap { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-2); border-radius: 14px; padding: 12px; font-size: 14px; margin: 10px 0 0; }
+    .req { color: var(--coral); }
+    .reg-error { color: var(--coral); font-weight: 600; margin: 0; }
+  </style>
+</head>
+<body>
+  <header class="reg-head">
+    <div class="reg-wrap">
+      <div class="brand"><img src="icons/logo.svg" alt=""><b>Grenier à Sel de Gainneville</b></div>
+      <h1 id="reg-title">Inscription exposant</h1>
+      <p id="reg-date"></p>
+    </div>
+  </header>
+
+  <main class="reg-wrap">
+    <section class="reg-card" id="step-form">
+      <h2>Votre inscription</h2>
+      <p class="reg-note">Remplissez la fiche puis envoyez-la à l'organisateur depuis votre téléphone ou votre messagerie. Vos informations ne sont enregistrées nulle part sur ce site : elles partent uniquement dans le message que vous envoyez.</p>
+      <form class="reg-form" id="reg-form" novalidate>
+        <label><span>Nom du stand (facultatif)</span><input name="stand" maxlength="80" autocomplete="organization"></label>
+        <div class="reg-two">
+          <label><span>Prénom <span class="req">*</span></span><input name="fn" maxlength="40" required autocomplete="given-name"></label>
+          <label><span>NOM <span class="req">*</span></span><input name="ln" maxlength="40" required autocomplete="family-name"></label>
+        </div>
+        <label><span>Objets vendus <span class="req">*</span></span><textarea name="p" rows="2" maxlength="200" required></textarea></label>
+        <div class="reg-two">
+          <label><span>Tables (3 max) <span class="req">*</span></span><input name="t" type="number" min="1" max="3" value="1" inputmode="numeric" required></label>
+          <label><span>Nombre de grilles</span><input name="g" type="number" min="0" max="30" value="0" inputmode="numeric"></label>
+        </div>
+        <div>
+          <p class="reg-label">Besoin d'électricité <span class="req">*</span></p>
+          <div class="reg-choice">
+            <label><input type="radio" name="el" value="oui"> Oui</label>
+            <label><input type="radio" name="el" value="non"> Non</label>
+          </div>
+          <p class="reg-note">L'électricité n'est disponible que sur les tables le long des murs : places limitées.</p>
+        </div>
+        <div class="reg-two">
+          <label><span>Téléphone <span class="req">*</span></span><input name="ph" type="tel" maxlength="30" required autocomplete="tel"></label>
+          <label><span>E-mail</span><input name="em" type="email" maxlength="120" autocomplete="email"></label>
+        </div>
+        <label><span>Remarques (voisinage souhaité, contraintes…)</span><textarea name="no" rows="2" maxlength="300"></textarea></label>
+        <p class="reg-error" id="reg-error" hidden></p>
+        <button class="btn primary" type="submit" style="height:50px;font-size:16px;justify-content:center">Continuer</button>
+      </form>
+    </section>
+
+    <section class="reg-card" id="step-send" hidden>
+      <h2>Envoyez votre inscription</h2>
+      <p class="reg-note">Choisissez comment l'envoyer. Le message contient un code que l'organisateur colle dans son outil : merci de ne pas le modifier.</p>
+      <div class="reg-recap" id="reg-recap"></div>
+      <div class="reg-send">
+        <button class="btn primary" id="send-mail" hidden>Envoyer par e-mail</button>
+        <button class="btn primary" id="send-sms" hidden>Envoyer par SMS</button>
+        <button class="btn" id="send-share" hidden>Partager (WhatsApp, Messages…)</button>
+        <button class="btn" id="send-copy">Copier le message</button>
+        <button class="btn" id="send-back" style="background:none">Modifier ma fiche</button>
+      </div>
+      <p class="reg-note" id="send-hint"></p>
+    </section>
+  </main>
+
+  <script type="module" src="js/inscription.js"></script>
+</body>
+</html>

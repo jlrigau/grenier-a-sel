@@ -1,6 +1,7 @@
 import { ROOM, REGIONS, TABLE_SIZE, defaultTables, regionAt, regionLabel, hasPower, wallPower } from './room.js';
 import { evaluate, optimize, placeOne, groupAround, tableRect, DEFAULT_SETTINGS, SEVERITY_RANK } from './engine.js';
 import { readFiche, guessCategory } from './fiches.js';
+import { inviteCode, findRegistrations } from './code.js';
 import { buildXlsx } from './xlsx.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
@@ -649,6 +650,16 @@ function renderSettings() {
       <button class="btn small" data-act="reset-power">Électricité : revenir à la règle des murs</button>
     </div>
 
+    <h3>Inscription en ligne</h3>
+    <p class="muted">Envoyez ce lien aux exposants : ils remplissent la fiche sur leur téléphone et vous la renvoient par message. Collez ensuite le message avec « Coller une inscription ». Rien n'est stocké sur le site.</p>
+    <label>Votre e-mail (où les exposants envoient leur fiche) <input type="email" data-org="email" value="${esc(db.organizer?.email || '')}" maxlength="120" inputmode="email"></label>
+    <label>Votre téléphone (pour un envoi par SMS, facultatif) <input type="tel" data-org="phone" value="${esc(db.organizer?.phone || '')}" maxlength="30"></label>
+    <div class="btn-row">
+      <button class="btn small primary" data-act="invite-share">Partager le lien d'inscription</button>
+      <button class="btn small" data-act="invite-copy">Copier le lien</button>
+      <a class="btn small" href="${esc(inviteUrl(ev))}" target="_blank" rel="noopener">Voir la fiche</a>
+    </div>
+
     <h3>Données</h3>
     <p class="muted">Tout est enregistré sur cet appareil uniquement. Sauvegardez régulièrement (le fichier peut être envoyé par mail ou rangé dans vos fichiers) ; « Importer » le remet dans l'outil, ici ou sur un autre appareil.</p>
     <p class="backup-line">${db.lastBackup ? `Dernière sauvegarde : <b>${sinceText(db.lastBackup)}</b>` : 'Aucune sauvegarde pour l\'instant.'}</p>
@@ -1204,6 +1215,7 @@ $('#tab-checks').addEventListener('click', (e) => {
 
 $('#tab-settings').addEventListener('change', (e) => {
   const el = e.target;
+  if (el.dataset.org) { db.organizer = { ...(db.organizer || {}), [el.dataset.org]: el.value.trim() }; save(); return; }
   if (el.dataset.ev) commit((ev) => { ev[el.dataset.ev] = el.value.trim() || (el.dataset.ev === 'name' ? ev.name : ''); });
   if (el.dataset.set) {
     const key = el.dataset.set;
@@ -1219,6 +1231,12 @@ $('#tab-settings').addEventListener('click', (e) => {
   if (act === 'reset-power') commit((ev) => { ev.tables.forEach((t) => { delete t.power; }); });
   if (act === 'backup') backupAll();
   if (act === 'share-event') shareEvent();
+  if (act === 'invite-copy') copyText(inviteUrl()).then(() => toast("Lien d'inscription copié", 'success'));
+  if (act === 'invite-share') {
+    const text = `Inscription exposant pour « ${cur().name} » : remplissez la fiche ici puis renvoyez-la-moi.`;
+    if (navigator.share) navigator.share({ title: cur().name, text, url: inviteUrl() }).catch(() => {});
+    else copyText(`${text}\n${inviteUrl()}`).then(() => toast("Lien d'inscription copié", 'success'));
+  }
   if (act === 'import') $('#import-file').click();
   if (act === 'delete-event') {
     const ev = cur();
@@ -1467,7 +1485,7 @@ $('#fiche-files').addEventListener('change', (e) => {
 
 function setFicheFields(f) {
   ficheForm.reset();
-  for (const k of ['products', 'firstName', 'lastName', 'phone', 'email', 'payment', 'notes']) ficheForm[k].value = f[k] || '';
+  for (const k of ['stand', 'products', 'firstName', 'lastName', 'phone', 'email', 'payment', 'notes']) ficheForm[k].value = f[k] || '';
   ficheForm.tables.value = f.tables || 1;
   ficheForm.grilles.value = f.grilles || 0;
   ficheForm.category.value = f.category || guessCategory(f.products);
@@ -1485,7 +1503,9 @@ function setFicheBusy(busy) {
 }
 
 async function showFiche() {
-  const file = ficheQueue[ficheIndex];
+  let file = ficheQueue[ficheIndex];
+  const reg = file && file.reg ? file.reg : null;
+  if (reg) file = null;
   const token = ++ficheToken;
   $('#fiche-count').textContent = ficheQueue.length > 1 ? `(${ficheIndex + 1}/${ficheQueue.length})` : '';
   const cats = [...new Set(cur().exhibitors.map((e) => (e.category || '').trim()).filter(Boolean))].sort();
@@ -1494,10 +1514,11 @@ async function showFiche() {
   ficheDialog.classList.toggle('no-photo', !file);
   $('#fiche-img').hidden = true;
   $('#fiche-raw').hidden = true;
-  setFicheFields({ uncertain: file ? new Set() : new Set(['electricity']) });
-  $('#fiche-warning').hidden = true;
+  setFicheFields(reg ? regToFields(reg) : { uncertain: file ? new Set() : new Set(['electricity']) });
+  if (!reg) $('#fiche-warning').hidden = true;
   $('#fiche-add').textContent = ficheIndex < ficheQueue.length - 1 ? 'Ajouter et fiche suivante' : 'Ajouter et placer';
   $('#fiche-skip').hidden = ficheQueue.length < 2;
+  $('#fiche-tip').hidden = !isIOS || !!reg;
   if (!ficheDialog.open) ficheDialog.showModal();
   if (!file) { if (!touchScreen()) ficheForm.products.focus(); return; }
 
@@ -1568,7 +1589,7 @@ ficheForm.addEventListener('submit', (e) => {
   const v = (k) => ficheForm[k].value.trim();
   const firstName = v('firstName');
   const lastName = v('lastName').toUpperCase();
-  const name = `${firstName} ${lastName}`.trim() || v('products') || 'Exposant';
+  const name = v('stand') || `${firstName} ${lastName}`.trim() || v('products') || 'Exposant';
   const fields = {
     name, firstName, lastName,
     products: v('products'),
@@ -1597,6 +1618,48 @@ ficheForm.addEventListener('submit', (e) => {
   else toast(`${name} ${same && same.id === id ? 'mis à jour' : 'ajouté'}`, 'success');
   nextFiche();
 });
+
+// ---------- Inscriptions en ligne ----------
+// L'organisateur partage un lien d'invitation (inscription.html#e=…) ; l'exposant remplit la fiche et
+// lui envoie un message contenant un code « GAS1.… » ; collé ici, il ouvre la fiche préremplie.
+const regToFields = (reg) => ({
+  stand: reg.stand || '', firstName: reg.fn || '', lastName: reg.ln || '', products: reg.p || '',
+  tables: reg.t || 1, grilles: reg.g || 0, electricity: !!reg.el, phone: reg.ph || '', email: reg.em || '',
+  notes: reg.no || '', uncertain: new Set(),
+});
+const inviteUrl = (ev = cur()) => `${new URL('inscription.html', location.href).href}#e=${inviteCode(ev, db.organizer || {})}`;
+
+const pasteDialog = $('#paste-dialog');
+$('#btn-paste-reg').onclick = () => {
+  $('#paste-text').value = '';
+  $('#paste-status').textContent = '';
+  pasteDialog.showModal();
+};
+$('#paste-cancel').onclick = () => pasteDialog.close();
+$('#paste-read').onclick = async () => {
+  try { $('#paste-text').value = await navigator.clipboard.readText(); updatePasteStatus(); }
+  catch { $('#paste-status').textContent = 'Collage automatique refusé : appuyez longuement dans la zone ci-dessous puis « Coller ».'; }
+};
+const updatePasteStatus = () => {
+  const n = findRegistrations($('#paste-text').value).length;
+  $('#paste-status').textContent = $('#paste-text').value.trim() ? (n ? `${plural(n, 'inscription trouvée', 'inscriptions trouvées')}.` : 'Aucun code « GAS1.… » trouvé dans ce texte.') : '';
+};
+$('#paste-text').addEventListener('input', updatePasteStatus);
+$('#paste-go').onclick = () => {
+  const regs = findRegistrations($('#paste-text').value);
+  if (!regs.length) { updatePasteStatus(); return; }
+  const other = regs.find((r) => r.e && r.e !== cur().id);
+  if (other) {
+    const target = db.events.find((e) => e.id === other.e);
+    if (target && confirm(`Cette inscription concerne « ${target.name} ». Passer à cet événement pour l'ajouter ?`)) {
+      db.currentId = target.id; save(); refresh();
+    }
+  }
+  pasteDialog.close();
+  ficheQueue = regs.map((reg) => ({ reg }));
+  ficheIndex = 0;
+  showFiche();
+};
 
 // ---------- Liste des exposants ----------
 
@@ -2471,7 +2534,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v42';
+const APP_VERSION = 'v43';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------

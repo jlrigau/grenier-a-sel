@@ -65,6 +65,27 @@ fiches d'inscription papier, **une fiche par photo**. L'outil :
 
 « ✍ Saisir » permet de recopier une fiche à la main avec le même formulaire.
 
+## Inscription en ligne
+
+Dans **Réglages → Inscription en ligne**, l'organisateur indique son e-mail et
+partage le lien d'inscription (`inscription.html#e=…`). L'exposant remplit la
+fiche sur son téléphone, puis l'envoie lui-même (e-mail, SMS, WhatsApp…) : le
+message contient un code `GAS1.…`. Dans l'outil, **« Coller une inscription »**
+ouvre la fiche préremplie, à valider. Aucune donnée n'est stockée sur le site :
+tout passe par les messages des personnes elles-mêmes.
+
+## Suivi, communication et jour J
+
+- Suivi de chaque inscription : paiement (à payer / payé, mode), confirmation
+  envoyée, **liste d'attente** (l'exposant n'est pas placé et sa table est libérée).
+- **Prévenir** un exposant : message prérempli avec sa table, envoyé par SMS,
+  e-mail ou partage ; « E-mails » copie toutes les adresses pour un envoi groupé.
+- Onglet **Jour J** : liste par table avec case « arrivé », recherche, appel ;
+  impression des **étiquettes de table** et d'un **plan d'entrée** avec index.
+- **Sauvegarde** : rappel quand des données n'ont pas été sauvegardées depuis
+  quelques jours ; « Sauvegarder tous les événements » et « Partager cet
+  événement » passent par la feuille de partage du téléphone.
+
 ## Liste des exposants
 
 « 📋 Liste des exposants » affiche toutes les inscriptions (issues des fiches ou

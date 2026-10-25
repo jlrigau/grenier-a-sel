@@ -164,6 +164,7 @@
       </button>
       <div class="side-actions">
         <button class="link" id="btn-fiche-manual"><svg class="i i-sm" aria-hidden="true"><use href="#i-pen"/></svg> Saisir une fiche à la main</button>
+        <button class="link" id="btn-paste-reg"><svg class="i i-sm" aria-hidden="true"><use href="#i-link"/></svg> Coller une inscription</button>
         <button class="link" id="btn-add-ex"><svg class="i i-sm" aria-hidden="true"><use href="#i-plus"/></svg> Exposant</button>
       </div>
       <div id="top-alert"></div>
@@ -315,6 +316,7 @@
       <div class="fiche-head">
         <h2>Fiche d'inscription <span id="fiche-count" class="muted"></span></h2>
         <span class="privacy"><svg class="i i-sm" aria-hidden="true"><use href="#i-shield"/></svg> Lecture sur cet appareil : la photo n'est envoyée nulle part</span>
+        <p class="fiche-tip" id="fiche-tip" hidden>Astuce : sur iPhone, touchez un champ puis l'icône « Scanner le texte » du clavier pour lire l'écriture à la main avec l'appareil photo (lecture faite par le téléphone).</p>
       </div>
       <div class="fiche-body">
         <div class="fiche-photo" id="fiche-photo">
@@ -323,6 +325,9 @@
           <details id="fiche-raw" hidden><summary>Texte reconnu</summary><pre id="fiche-text"></pre></details>
         </div>
         <div class="form-grid fiche-fields">
+          <label class="span2" data-f="stand">Nom du stand (facultatif)
+            <input name="stand" maxlength="80" autocomplete="off">
+          </label>
           <label class="span2" data-f="products">Objets vendus
             <input name="products" maxlength="200" autocomplete="off">
           </label>
@@ -388,6 +393,20 @@
     <p class="list-status" id="list-status"></p>
     <div class="list-scroll"><table class="list-table" id="list-table"></table></div>
     <p class="muted small">Cliquez une ligne pour modifier l'exposant · cliquez un titre de colonne pour trier.</p>
+    </div>
+  </dialog>
+
+  <dialog id="paste-dialog">
+    <button type="button" class="sheet-close" data-close title="Fermer" aria-label="Fermer"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <h2>Inscription reçue</h2>
+    <p class="muted small">Collez ici le message envoyé par l'exposant depuis la fiche d'inscription en ligne (par e-mail, SMS ou WhatsApp). Plusieurs messages peuvent être collés d'un coup.</p>
+    <button class="btn" id="paste-read" type="button">Coller depuis le presse-papiers</button>
+    <textarea id="paste-text" rows="6" placeholder="Bonjour, … GAS1.…"></textarea>
+    <p class="muted small" id="paste-status"></p>
+    <div class="dialog-actions">
+      <span class="spacer"></span>
+      <button class="btn" type="button" id="paste-cancel">Annuler</button>
+      <button class="btn primary" type="button" id="paste-go">Ajouter</button>
     </div>
   </dialog>
 
