@@ -90,7 +90,7 @@ chaque push sur `main` (Settings → Pages → Source : **GitHub Actions**).
 ## Exemple fourni
 
 L'événement « Démonstration (données fictives) » créé au premier lancement ne
-contient que des données inventées : libellés génériques (« Miel (démo) »…),
+contient que des données synthétiques : noms de stands inventés,
 aucun nom de personne, téléphone ou e-mail. Il peut être supprimé dans
 « Réglages ». Le dépôt ne contient aucune donnée personnelle.
 

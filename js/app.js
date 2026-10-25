@@ -51,6 +51,10 @@ function normalizeEvent(ev) {
   });
   out.categoryColors = Object.fromEntries(Object.entries(ev.categoryColors || {}).map(([k, c]) => [k, OLD_PALETTE.includes(c) ? PALETTE[OLD_PALETTE.indexOf(c)] : c]));
   if (out.name === 'Exemple – Marché de Noël') { out.demo = true; out.name = 'Démonstration (données fictives)'; }
+  if (out.demo) {
+    const renamed = { 'Miel': 'Miel des Coteaux', 'Confitures': 'Rucher du Vexin', 'Crêpes': 'Crêpes de Mamie', 'Chocolats': 'Chocolaterie Martin', 'Bijoux': 'Bijoux Lune', 'Perles': 'Atelier Perles', 'Poterie': 'Poterie du Grès', 'Luminaires': 'Luminaires Récup', 'Bougies': 'Bougies & Cie', 'Couture': 'Couture Créative', 'Tricots': 'Tricots de Laine', 'Livres': 'Librairie Ambulante', 'Association': 'Club photo', 'Savons': 'Savonnerie du Val', 'Jouets en bois': 'Jouets en bois', 'Peintures': 'Atelier Aquarelle' };
+    out.exhibitors.forEach((e) => { const m = e.name.match(/^(.*) \(démo\)$/); if (m && renamed[m[1]]) e.name = renamed[m[1]]; });
+  }
   out.assignments = ev.assignments || {};
   delete out.outlets;
   delete out.settings.elecDistance;
@@ -60,38 +64,40 @@ function normalizeEvent(ev) {
   return out;
 }
 
-// Événement de démonstration : données 100 % fictives (aucune personne ni entreprise réelle,
-// aucun téléphone ni e-mail). Il peut être supprimé dans « Réglages ».
+// Événement de démonstration : données entièrement synthétiques. Les noms de stands sont
+// inventés, sans nom de personne, téléphone ni e-mail. Il peut être supprimé dans « Réglages ».
+const DEMO_EXHIBITORS = [
+  // [nom, catégorie, objets vendus, tables, électricité, emplacement, à séparer de]
+  ['Miel des Coteaux', 'Alimentation', 'Miel et pain d\'épices', 1, false, '', ['Rucher du Vexin']],
+  ['Rucher du Vexin', 'Alimentation', 'Miel, bougies en cire', 1, false, ''],
+  ['Crêpes de Mamie', 'Restauration', 'Crêpes et boissons chaudes', 2, true, ''],
+  ['Chocolaterie Martin', 'Alimentation', 'Chocolats artisanaux', 1, true, ''],
+  ['Bijoux Lune', 'Bijoux', 'Bijoux fantaisie', 1, false, '', ['Atelier Perles']],
+  ['Atelier Perles', 'Bijoux', 'Colliers et bracelets en perles', 1, false, ''],
+  ['Poterie du Grès', 'Céramique', 'Poteries, vaisselle', 2, false, ''],
+  ['Luminaires Récup', 'Décoration', 'Lampes de récupération', 1, true, ''],
+  ['Bougies & Cie', 'Décoration', 'Bougies parfumées', 1, false, ''],
+  ['Couture Créative', 'Vêtements', 'Sacs et accessoires cousus main', 2, true, ''],
+  ['Tricots de Laine', 'Vêtements', 'Bonnets, écharpes', 1, false, ''],
+  ['Librairie Ambulante', 'Livres', 'Livres d\'occasion', 2, false, 'pourtour'],
+  ['Club photo', 'Association', 'Tirages photo', 2, false, 'hall'],
+  ['Savonnerie du Val', 'Cosmétique', 'Savons artisanaux', 1, false, ''],
+  ['Jouets en bois', 'Jouets', 'Jouets en bois', 1, false, 'ilot'],
+  ['Atelier Aquarelle', 'Art', 'Peintures sur grilles', 1, false, 'ilot'],
+];
+
 function makeDemoEvent() {
   const ev = newEvent('Démonstration (données fictives)', '');
   ev.demo = true;
-  const list = [
-    ['Miel (démo)', 'Alimentation', 1, false, '', ['Confitures (démo)']],
-    ['Confitures (démo)', 'Alimentation', 1, false, ''],
-    ['Crêpes (démo)', 'Restauration', 2, true, ''],
-    ['Chocolats (démo)', 'Alimentation', 1, true, ''],
-    ['Bijoux (démo)', 'Bijoux', 1, false, '', ['Perles (démo)']],
-    ['Perles (démo)', 'Bijoux', 1, false, ''],
-    ['Poterie (démo)', 'Céramique', 2, false, ''],
-    ['Luminaires (démo)', 'Décoration', 1, true, ''],
-    ['Bougies (démo)', 'Décoration', 1, false, ''],
-    ['Couture (démo)', 'Vêtements', 2, true, ''],
-    ['Tricots (démo)', 'Vêtements', 1, false, ''],
-    ['Livres (démo)', 'Livres', 2, false, 'pourtour'],
-    ['Association (démo)', 'Association', 2, false, 'hall'],
-    ['Savons (démo)', 'Cosmétique', 1, false, ''],
-    ['Jouets en bois (démo)', 'Jouets', 1, false, 'ilot'],
-    ['Peintures (démo)', 'Art', 1, false, 'ilot'],
-  ];
   const byName = {};
-  for (const [name, category, tables, electricity, zone] of list) {
-    const ex = newExhibitor({ name, category, tables, electricity, zone, products: name.replace(' (démo)', ''), grilles: zone === 'ilot' ? 2 : 0, payment: String(tables * 5) });
+  for (const [name, category, products, tables, electricity, zone] of DEMO_EXHIBITORS) {
+    const ex = newExhibitor({ name, category, products, tables, electricity, zone, grilles: zone === 'ilot' ? 2 : 0, payment: String(tables * 5) });
     byName[name] = ex;
     ev.exhibitors.push(ex);
     ensureCategoryColor(ev, category);
   }
-  for (const [name, , , , , avoid] of list) if (avoid) byName[name].avoid = avoid.map((n) => byName[n].id);
-  byName['Tricots (démo)'].near = [byName['Couture (démo)'].id];
+  for (const [name, , , , , , avoid] of DEMO_EXHIBITORS) if (avoid) byName[name].avoid = avoid.map((n) => byName[n].id);
+  byName['Tricots de Laine'].near = [byName['Couture Créative'].id];
   ev.assignments = optimize(ev, { mode: 'fresh', seed: 7, iterations: 20000 }).assignments;
   return ev;
 }
