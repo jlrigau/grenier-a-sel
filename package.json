@@ -1,0 +1,12 @@
+{
+  "name": "grenier-a-sel",
+  "private": true,
+  "description": "Plans des exposants du Grenier à Sel de Gainneville (site statique, sans compilation).",
+  "scripts": {
+    "test": "node tests/run.cjs",
+    "version:bump": "node scripts/bump-version.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

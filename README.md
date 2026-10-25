@@ -139,5 +139,23 @@ arrondis sont définis comme variables en tête de `css/style.css`.
 
 - `js/room.js` : géométrie de la salle (en mètres), tables et prises par défaut.
 - `js/engine.js` : vérification des contraintes et placement automatique
-  (glouton + recuit simulé).
-- `js/app.js` : interface (plan SVG, glisser-déposer, formulaires, stockage).
+  (glouton + recuit simulé ; liste d'attente, grilles sur l'îlot, place précédente).
+- `js/app.js` : interface (plan SVG, glisser-déposer, formulaires, stockage, navigation).
+- `js/util.js` : petits outils généraux (DOM, texte, dates, fichiers).
+- `js/day.js` : onglet Jour J (arrivées, étiquettes, plan d'entrée).
+- `js/messages.js` : « Prévenir » un exposant, e-mails de tous.
+- `js/inscriptions.js` et `js/code.js` : lien d'inscription et codes échangés ;
+  `inscription.html` + `js/inscription.js` : fiche publique remplie par les exposants.
+- `js/fiches.js` : lecture des photos de fiches (Tesseract, sur l'appareil).
+- `js/xlsx.js` : export Excel.
+
+## Tests et développement
+
+- `npm test` lance les tests automatiques (`tests/run.cjs`) : moteur de placement,
+  codes d'inscription, et parcours dans un navigateur simulé (téléphone et
+  ordinateur : pages, clavier, retour, inscription en ligne, suivi, jour J,
+  sauvegarde, export Excel). Ils tournent aussi sur GitHub à chaque envoi
+  (`.github/workflows/tests.yml`).
+- `npm run version:bump` passe à la version suivante dans `sw.js` et
+  `js/app.js` en même temps (un test vérifie qu'elles sont identiques) : à faire
+  à chaque publication pour que les applications installées se mettent à jour.

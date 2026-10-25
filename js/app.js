@@ -1,8 +1,11 @@
 import { ROOM, REGIONS, TABLE_SIZE, defaultTables, regionAt, regionLabel, hasPower, wallPower } from './room.js';
 import { evaluate, optimize, placeOne, groupAround, tableRect, DEFAULT_SETTINGS, SEVERITY_RANK } from './engine.js';
 import { readFiche, guessCategory } from './fiches.js';
-import { inviteCode, findRegistrations } from './code.js';
 import { buildXlsx } from './xlsx.js';
+import { ic, SNAP, $, $$, uid, esc, r2, snap, clamp, plural, touchScreen, isTextField, formatLongDate, formatDate, formatDateTime, slug, normalizeKey, download, copyText } from './util.js';
+import { renderDay } from './day.js';
+import { openNotify, copyEmails } from './messages.js';
+import { regToFields, inviteUrl } from './inscriptions.js';
 
 const STORAGE_KEY = 'grenier-a-sel/v1';
 const NOTICE_KEY = 'grenier-a-sel/notice-dismissed';
@@ -14,23 +17,8 @@ const OLD_PALETTES = [
   ['#b2ccff', '#fedf89', '#a6f4c5', '#fecdca', '#d9d6fe', '#99f6e0', '#fcceee', '#fddcab', '#c7d7fe', '#d0f8ab', '#b9e6fe', '#e4e7ec', '#fecdd6', '#d6bbfb'],
 ];
 const migrateColor = (c) => { for (const old of OLD_PALETTES) if (old.includes(c)) return PALETTE[old.indexOf(c)]; return c; };
-const ic = (name, cls = '') => `<svg class="i${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const NO_CATEGORY_COLOR = '#ece6da';
-const SNAP = 0.05;
 
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-const uid = (p) => p + Math.random().toString(36).slice(2, 9);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const r2 = (v) => Math.round(v * 100) / 100;
-const snap = (v) => Math.round(v / SNAP) * SNAP;
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const plural = (n, s, p = s + 's') => `${n} ${n > 1 ? p : s}`;
-// Écran tactile : on évite d'ouvrir le clavier tout seul à l'ouverture d'une fenêtre.
-const touchScreen = () => window.matchMedia('(pointer: coarse)').matches;
-// Champ où l'on tape au clavier (pas une case à cocher ni un bouton).
-const isTextField = (el) => !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
-  || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'file', 'range', 'color'].includes(el.type)));
 // Ne pas redessiner un panneau pendant qu'on y tape : remplacer le champ fermerait le clavier
 // (et le champ suivant touché disparaîtrait). Le panneau est redessiné quand on en sort.
 const deferredRenders = new Map();
@@ -217,68 +205,6 @@ function initials(name) {
 const PAY_METHODS = { cheque: 'chèque', especes: 'espèces', virement: 'virement', autre: 'autre' };
 const payLabel = (ex) => (ex.paymentStatus === 'paid' ? `payé${ex.paymentMethod ? ' (' + PAY_METHODS[ex.paymentMethod] + ')' : ''}` : ex.paymentStatus === 'pending' ? 'à payer' : '');
 
-// Tous les e-mails de l'événement (hors liste d'attente) : copiés, prêts à coller en copie cachée.
-async function copyEmails() {
-  const mails = [...new Set(cur().exhibitors.filter((e) => !e.waitlist && /@/.test(e.email || '')).map((e) => e.email.trim()))];
-  if (!mails.length) { toast("Aucune adresse e-mail dans la liste.", 'warning'); return; }
-  await copyText(mails.join(', '));
-  toast(`${plural(mails.length, 'adresse copiée', 'adresses copiées')} : collez-les dans le champ « Cci » de votre messagerie.`, 'success',
-    { label: 'Écrire', fn: () => { location.href = `mailto:?bcc=${encodeURIComponent(mails.join(','))}&subject=${encodeURIComponent(cur().name)}`; } });
-}
-
-// ---------- Prévenir un exposant (message prérempli) ----------
-function notifyText(ex, ev = cur()) {
-  const nums = tableNums(ex.id);
-  const who = ex.firstName || ex.name;
-  const when = ev.date ? ` le ${formatLongDate(ev.date).toLowerCase()}` : '';
-  const where = ex.waitlist ? "Vous êtes pour l'instant sur liste d'attente : nous vous recontactons dès qu'une table se libère."
-    : nums.length ? `Votre emplacement : ${nums.length > 1 ? 'tables' : 'table'} ${nums.join(' et ')}${ex.electricity ? ' (avec électricité)' : ''}.`
-    : 'Votre emplacement vous sera communiqué prochainement.';
-  const pay = ex.paymentStatus === 'pending' && ex.payment ? `\nRèglement attendu : ${ex.payment} €.` : '';
-  return `Bonjour ${who},\n\nMerci pour votre inscription à « ${ev.name} »${when} au Grenier à Sel de Gainneville.\n${where}${pay}\n\nÀ bientôt !`;
-}
-function openNotify(id) {
-  const ex = exById(id);
-  if (!ex) return;
-  const text = notifyText(ex);
-  const phone = (ex.phone || '').replace(/[^\d+]/g, '');
-  const subject = `${cur().name} : votre emplacement`;
-  $('#notify-title').textContent = `Prévenir ${ex.name}`;
-  $('#notify-text').value = text;
-  $('#notify-sms').hidden = !phone;
-  $('#notify-mail').hidden = !ex.email;
-  $('#notify-share').hidden = !navigator.share;
-  $('#notify-dialog').dataset.id = id;
-  $('#notify-dialog').dataset.phone = phone;
-  $('#notify-dialog').dataset.subject = subject;
-  $('#notify-hint').textContent = !phone && !ex.email ? "Pas de téléphone ni d'e-mail pour cet exposant : copiez le message pour l'envoyer autrement." : '';
-  $('#notify-dialog').showModal();
-}
-$('#ex-notify').onclick = () => { const id = editingId; exDialog.close(); openNotify(id); };
-$('#notify-dialog').addEventListener('click', async (e) => {
-  const b = e.target.closest('[data-notify]');
-  if (!b) return;
-  const dlg = $('#notify-dialog');
-  const ex = exById(dlg.dataset.id);
-  const text = $('#notify-text').value;
-  const how = b.dataset.notify;
-  if (how === 'close') { dlg.close(); return; }
-  if (how === 'sms') location.href = `sms:${dlg.dataset.phone}${isIOS ? '&' : '?'}body=${encodeURIComponent(text)}`;
-  if (how === 'mail') location.href = `mailto:${encodeURIComponent(ex.email)}?subject=${encodeURIComponent(dlg.dataset.subject)}&body=${encodeURIComponent(text)}`;
-  if (how === 'share') { try { await navigator.share({ text }); } catch { return; } }
-  if (how === 'copy') { await copyText(text); toast('Message copié', 'success'); }
-  if (ex && !ex.confirmed && !ex.waitlist) commit((ev) => { exById(ex.id, ev).confirmed = true; });
-  dlg.close();
-});
-async function copyText(text) {
-  try { await navigator.clipboard.writeText(text); return true; } catch { /* ancien navigateur */ }
-  const t = document.createElement('textarea');
-  t.value = text; document.body.appendChild(t); t.select();
-  try { document.execCommand('copy'); } catch { /* ignore */ }
-  t.remove();
-  return true;
-}
-
 // Même exposant dans une édition précédente (même e-mail, téléphone ou nom) : ses numéros de table,
 // proposés en priorité lors du placement.
 function previousPlace(fields, ev = cur()) {
@@ -293,6 +219,8 @@ function previousPlace(fields, ev = cur()) {
   }
   return null;
 }
+
+$('#ex-notify').onclick = () => { const id = editingId; exDialog.close(); openNotify(id); };
 
 // Libère les tables d'un exposant (passage en liste d'attente).
 function freeTablesOf(ev, id) {
@@ -443,17 +371,7 @@ function renderHeader() {
   $('#btn-redo').disabled = !redoStack.length;
 }
 
-function formatLongDate(d) {
-  const date = new Date(d + 'T12:00:00');
-  if (Number.isNaN(date.getTime())) return d;
-  const txt = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  return txt.charAt(0).toUpperCase() + txt.slice(1);
-}
 
-function formatDate(d) {
-  const [y, m, day] = d.split('-');
-  return y && m && day ? `${day}/${m}/${y}` : d;
-}
 
 // ---------- Chiffres clés ----------
 
@@ -950,8 +868,8 @@ function setPlanFull(on, fromHistory = false) {
   if (on === document.documentElement.classList.contains('plan-full')) return;
   document.documentElement.classList.toggle('plan-full', on);
   $('#plan-full').title = on ? 'Quitter le plein écran' : 'Plan en plein écran';
-  if (on) history.pushState({ page: 'plan-full' }, '');
-  else if (!fromHistory && history.state && history.state.page === 'plan-full') { ignoreNextPop = true; history.back(); }
+  if (on) pushStep({ page: 'plan-full' }, () => document.documentElement.classList.contains('plan-full'));
+  else if (!fromHistory && history.state && history.state.page === 'plan-full') popStep();
   requestAnimationFrame(fitView);
 }
 $('#plan-full').onclick = () => setPlanFull(!document.documentElement.classList.contains('plan-full'));
@@ -1190,10 +1108,10 @@ function showTab(tab) {
   if (!isPhone()) return;
   const sub = onSubPage();
   if (sub) {
-    if (wasSub) history.replaceState({ page: tab }, ''); else history.pushState({ page: tab }, '');
+    if (wasSub) history.replaceState({ page: tab }, ''); else pushStep({ page: tab }, onSubPage);
     window.scrollTo(0, 0);
   } else {
-    if (wasSub && history.state && history.state.page) { ignoreNextPop = true; history.back(); }
+    if (wasSub && history.state && history.state.page) popStep();
     if (wasSub) window.scrollTo(0, 0);
     else $(tab === 'exhibitors' ? '#map-wrap' : '.sidebar').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1593,6 +1511,13 @@ async function showFiche() {
   }
 }
 
+// Ouvre une série de fiches (photos, saisies ou inscriptions reçues).
+function startFiches(items) {
+  ficheQueue = items;
+  ficheIndex = 0;
+  showFiche();
+}
+
 function nextFiche() {
   ficheIndex++;
   if (ficheIndex < ficheQueue.length) showFiche();
@@ -1608,7 +1533,6 @@ ficheForm.addEventListener('change', (e) => {
   if (e.target.name === 'tables' && !ficheForm.payment.value) ficheForm.payment.value = String(5 * (Number(e.target.value) || 1));
 });
 
-const normalizeKey = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9@.]/gi, '').toLowerCase();
 
 ficheForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -1655,48 +1579,6 @@ ficheForm.addEventListener('submit', (e) => {
   else toast(`${name} ${same && same.id === id ? 'mis à jour' : 'ajouté'}`, 'success');
   nextFiche();
 });
-
-// ---------- Inscriptions en ligne ----------
-// L'organisateur partage un lien d'invitation (inscription.html#e=…) ; l'exposant remplit la fiche et
-// lui envoie un message contenant un code « GAS1.… » ; collé ici, il ouvre la fiche préremplie.
-const regToFields = (reg) => ({
-  stand: reg.stand || '', firstName: reg.fn || '', lastName: reg.ln || '', products: reg.p || '',
-  tables: reg.t || 1, grilles: reg.g || 0, electricity: !!reg.el, phone: reg.ph || '', email: reg.em || '',
-  notes: reg.no || '', uncertain: new Set(),
-});
-const inviteUrl = (ev = cur()) => `${new URL('inscription.html', location.href).href}#e=${inviteCode(ev, db.organizer || {})}`;
-
-const pasteDialog = $('#paste-dialog');
-$('#btn-paste-reg').onclick = () => {
-  $('#paste-text').value = '';
-  $('#paste-status').textContent = '';
-  pasteDialog.showModal();
-};
-$('#paste-cancel').onclick = () => pasteDialog.close();
-$('#paste-read').onclick = async () => {
-  try { $('#paste-text').value = await navigator.clipboard.readText(); updatePasteStatus(); }
-  catch { $('#paste-status').textContent = 'Collage automatique refusé : appuyez longuement dans la zone ci-dessous puis « Coller ».'; }
-};
-const updatePasteStatus = () => {
-  const n = findRegistrations($('#paste-text').value).length;
-  $('#paste-status').textContent = $('#paste-text').value.trim() ? (n ? `${plural(n, 'inscription trouvée', 'inscriptions trouvées')}.` : 'Aucun code « GAS1.… » trouvé dans ce texte.') : '';
-};
-$('#paste-text').addEventListener('input', updatePasteStatus);
-$('#paste-go').onclick = () => {
-  const regs = findRegistrations($('#paste-text').value);
-  if (!regs.length) { updatePasteStatus(); return; }
-  const other = regs.find((r) => r.e && r.e !== cur().id);
-  if (other) {
-    const target = db.events.find((e) => e.id === other.e);
-    if (target && confirm(`Cette inscription concerne « ${target.name} ». Passer à cet événement pour l'ajouter ?`)) {
-      db.currentId = target.id; save(); refresh();
-    }
-  }
-  pasteDialog.close();
-  ficheQueue = regs.map((reg) => ({ reg }));
-  ficheIndex = 0;
-  showFiche();
-};
 
 // ---------- Liste des exposants ----------
 
@@ -1991,15 +1873,6 @@ const dataMenu = $('#data-menu');
 $('#btn-data-menu').onclick = (e) => { e.stopPropagation(); dataMenu.hidden = !dataMenu.hidden; };
 document.addEventListener('click', (e) => { if (!e.target.closest('.menu')) dataMenu.hidden = true; });
 
-function download(filename, content, type) {
-  const blob = new Blob([content], { type });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-}
 // Partage d'un fichier : feuille de partage du téléphone (WhatsApp, Mail, Fichiers…) si possible,
 // sinon téléchargement. Renvoie true si le fichier est parti (partagé ou téléchargé).
 async function shareOrDownload(filename, content, title) {
@@ -2043,7 +1916,6 @@ const sinceText = (t) => {
   return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`;
 };
 
-const slug = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'plan';
 
 dataMenu.addEventListener('click', (e) => {
   const act = e.target.closest('[data-action]')?.dataset.action;
@@ -2118,9 +1990,6 @@ function isUnsaved(ev = cur()) {
   return ev.exhibitors.length > 0 && !ev.plans.some((pl) => samePlan(ev, pl));
 }
 
-function formatDateTime(ts) {
-  return new Date(ts).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 function planSummary(plan) {
   const r = evaluate(plan.data);
@@ -2367,62 +2236,6 @@ $('#btn-print').onclick = () => {
   window.print();
 };
 
-// ---------- Jour J : accueil des exposants ----------
-// Liste par numéro de table, case « arrivé », recherche ; étiquettes de table et plan d'entrée à imprimer.
-const firstTable = (ex) => tableNums(ex.id)[0] ?? 9999;
-function renderDay() {
-  const ev = cur();
-  const list = activeExhibitors(ev).sort((a, b) => firstTable(a) - firstTable(b) || a.name.localeCompare(b.name, 'fr'));
-  const arrived = list.filter((e) => e.arrived).length;
-  $('#day-count').innerHTML = `<b>${arrived}</b> / ${list.length} exposants arrivés`;
-  $('#day-bar').style.width = list.length ? `${Math.round((arrived / list.length) * 100)}%` : '0';
-  const q = $('#day-search').value.trim().toLowerCase();
-  const shown = list.filter((ex) => !q || `${ex.name} ${ex.products} ${ex.category} ${tableNums(ex.id).join(' ')}`.toLowerCase().includes(q));
-  $('#day-list').innerHTML = shown.map((ex) => {
-    const nums = tableNums(ex.id);
-    return `<li class="day-item ${ex.arrived ? 'arrived' : ''}">
-      <span class="day-table ${nums.length ? '' : 'none'}">${nums.length ? nums.join('+') : '—'}</span>
-      <div class="day-main"><b>${esc(ex.name)}${ex.electricity ? ` ${ic('zap', 'i-sm')}` : ''}</b><small>${esc(ex.products || ex.category || '')}${ex.paymentStatus === 'pending' ? ' · <span class="tag-pay">À payer</span>' : ''}</small></div>
-      ${ex.phone ? `<a class="day-call" href="tel:${esc(ex.phone.replace(/\s/g, ''))}" title="Appeler">${ic('phone')}</a>` : ''}
-      <button class="day-check" data-arrived="${ex.id}" aria-pressed="${ex.arrived}" title="${ex.arrived ? 'Arrivé' : 'Marquer arrivé'}">${ic('check')}</button>
-    </li>`;
-  }).join('') || '<li class="empty">Aucun exposant ne correspond.</li>';
-}
-$('#day-search').addEventListener('input', renderDay);
-$('#tab-day').addEventListener('click', (e) => {
-  const a = e.target.closest('[data-arrived]');
-  if (a) { commit((ev) => { const x = exById(a.dataset.arrived, ev); x.arrived = !x.arrived; }); return; }
-  const act = e.target.closest('[data-day]')?.dataset.day;
-  if (act === 'labels') printLabels();
-  if (act === 'entrance') printEntrance();
-  if (act === 'reset' && confirm('Remettre toutes les arrivées à zéro ?')) commit((ev) => { ev.exhibitors.forEach((x) => { x.arrived = false; }); });
-});
-
-function printLabels() {
-  const ev = cur();
-  const list = activeExhibitors(ev).filter((e) => tableNums(e.id).length).sort((a, b) => firstTable(a) - firstTable(b));
-  if (!list.length) { toast("Aucun exposant n'est encore placé.", 'warning'); return; }
-  $('#print-area').innerHTML = `<div class="print-labels">${list.map((ex) => {
-    const nums = tableNums(ex.id);
-    return `<div class="label"><div class="label-num">${nums.length > 1 ? 'Tables' : 'Table'} ${nums.join(' + ')}</div>
-      <div class="label-name">${esc(ex.name)}</div><div class="label-sub">${esc(ex.products || ex.category || '')}</div>
-      <div class="label-ev">${esc(ev.name)}${ev.date ? ' · ' + formatDate(ev.date) : ''}</div></div>`;
-  }).join('')}</div>`;
-  window.print();
-}
-function printEntrance() {
-  const ev = cur();
-  const B = ROOM.bounds;
-  const list = activeExhibitors(ev).filter((e) => tableNums(e.id).length).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-  $('#print-area').innerHTML = `<div class="print-page entrance">
-    <h1>${esc(ev.name)} — plan des exposants</h1>
-    <div class="entrance-body">
-      <svg viewBox="-0.8 -1.2 ${B.w + 1.6} ${B.h + 2.8}" class="print-plan"><g>${roomSVG()}</g><g>${tablesSVG(ev, { print: true })}</g></svg>
-      <ol class="entrance-index">${list.map((ex) => `<li><b>${tableNums(ex.id).join('+')}</b> ${esc(ex.name)}</li>`).join('')}</ol>
-    </div></div>`;
-  window.print();
-}
-
 // ---------- Notifications ----------
 
 function toast(message, kind = 'info', action = null) {
@@ -2577,7 +2390,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v45';
+const APP_VERSION = 'v46';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------
@@ -2608,18 +2421,51 @@ document.addEventListener('cancel', (e) => { if (e.target.tagName === 'DIALOG') 
 
 // Bouton « retour » : chaque fenêtre ouverte ajoute une étape dans l'historique.
 let closingFromHistory = false;
-let ignoreNextPop = false;
+// history.back() est asynchrone : tant qu'un retour lancé par l'outil n'est pas arrivé, les nouvelles
+// étapes attendent (sinon le retour retirerait la mauvaise étape et « retour » sortirait de l'outil).
+let pendingBacks = 0;
+let pendingPushes = [];
+function pushStep(state, stillValid) {
+  if (pendingBacks) pendingPushes.push({ state, stillValid });
+  else history.pushState(state, '');
+}
+function popStep() {
+  pendingBacks++;
+  history.back();
+}
+// Fermeture d'une fenêtre : traitée tout de suite (l'évènement « close » arrive un peu plus tard,
+// parfois après l'ouverture de la fenêtre suivante).
+function dialogClosed(dlg) {
+  if (dlg.stepDone) return;
+  dlg.stepDone = true;
+  if (closingFromHistory) { closingFromHistory = false; return; }
+  const queued = pendingPushes.findIndex((p) => p.state.dialog === dlg.id);
+  if (queued >= 0) { pendingPushes.splice(queued, 1); return; }
+  if (history.state && history.state.dialog === dlg.id) popStep();
+}
 const showModal = HTMLDialogElement.prototype.showModal;
+const closeDialog = HTMLDialogElement.prototype.close;
 HTMLDialogElement.prototype.showModal = function () {
   showModal.call(this);
-  history.pushState({ dialog: this.id }, '');
-  this.addEventListener('close', () => {
-    if (closingFromHistory) { closingFromHistory = false; return; }
-    if (history.state && history.state.dialog === this.id) { ignoreNextPop = true; history.back(); }
-  }, { once: true });
+  this.stepDone = false;
+  pushStep({ dialog: this.id }, () => this.open);
+  this.addEventListener('close', () => dialogClosed(this), { once: true });
+};
+HTMLDialogElement.prototype.close = function (...args) {
+  const wasOpen = this.open;
+  closeDialog.apply(this, args);
+  if (wasOpen) dialogClosed(this);
 };
 window.addEventListener('popstate', () => {
-  if (ignoreNextPop) { ignoreNextPop = false; return; }
+  if (pendingBacks) {
+    pendingBacks--;
+    if (!pendingBacks) {
+      const queue = pendingPushes;
+      pendingPushes = [];
+      queue.forEach(({ state, stillValid }) => { if (stillValid()) history.pushState(state, ''); });
+    }
+    return;
+  }
   const open = [...document.querySelectorAll('dialog[open]')].pop();
   if (!open && document.documentElement.classList.contains('plan-full')) { setPlanFull(false, true); return; }
   if (!open && onSubPage()) { ui.tab = 'exhibitors'; renderSidebar(); window.scrollTo(0, 0); return; }
@@ -2628,3 +2474,6 @@ window.addEventListener('popstate', () => {
 
 // Accès pour le débogage depuis la console.
 window.grenier = { get event() { return cur(); }, evaluate: () => evaluate(cur()) };
+
+// Utilisé par les modules day.js, messages.js et inscriptions.js.
+export { activeExhibitors, commit, cur, db, exById, isIOS, refresh, roomSVG, save, startFiches, tableNums, tablesSVG, toast };
