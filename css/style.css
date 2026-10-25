@@ -154,13 +154,30 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); width: 17p
 
 /* Titre de l'événement */
 .hero { display: flex; align-items: center; gap: 12px; padding: 14px 32px 16px; flex-wrap: wrap; }
-.event-title { position: relative; display: inline-flex; align-items: center; max-width: 100%; }
-.event-title select {
-  appearance: none; -webkit-appearance: none; border: 0 !important; background: transparent; box-shadow: none !important;
-  font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; padding: 0 40px 2px 0; cursor: pointer; max-width: 70vw;
-  text-overflow: ellipsis; color: var(--ink);
+.event-switch { position: relative; min-width: 0; max-width: 100%; }
+.event-title {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; border: 0; background: none; padding: 0; cursor: pointer;
+  font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; color: var(--ink); text-align: left;
 }
-.event-title .chev { position: absolute; right: 6px; width: 24px; height: 24px; pointer-events: none; color: var(--ink-3); }
+.event-title #event-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.event-title .chev { flex-shrink: 0; width: 24px; height: 24px; color: var(--ink-3); transition: transform .15s; }
+.event-title[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.hero-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* Menu des événements, sous le titre (l'identifiant passe devant les règles des autres menus) */
+#event-menu {
+  position: absolute; top: calc(100% + 8px); left: 0; right: auto; bottom: auto; z-index: 55;
+  width: min(360px, calc(100vw - 28px)); max-height: min(60vh, 460px); overflow: auto; padding: 6px; border-radius: 18px;
+  box-shadow: 0 14px 40px rgba(29, 51, 40, .25);
+}
+#event-menu button { align-items: center; gap: 10px; padding: 10px 12px; }
+#event-menu button.current { background: var(--green-soft); }
+#event-menu .ev-check { width: 20px; flex-shrink: 0; color: var(--green); display: grid; place-items: center; }
+#event-menu .ev-label { display: flex; flex-direction: column; min-width: 0; }
+#event-menu .ev-label b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#event-menu .ev-label small { color: var(--ink-3); font-size: 12.5px; }
+#event-menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
+#event-menu [data-ev-new] { color: var(--green); }
+#event-menu [data-ev-new] .i { width: 20px; }
 .date-pill { background: var(--mustard-soft); color: var(--mustard-ink); font-weight: 700; padding: 7px 14px; border-radius: 999px; font-size: 14px; }
 .date-pill.empty { background: var(--surface-3); color: var(--ink-3); font-weight: 600; }
 .plan-pill {
@@ -527,7 +544,8 @@ dialog.full[open] { display: flex; }
   .nav-pills { order: 3; width: 100%; justify-content: space-between; }
   .nav-pills button { flex: 1; justify-content: center; padding: 8px 6px; }
   .hero { padding: 10px 14px 12px; gap: 8px; }
-  .event-title select { font-size: 28px; max-width: calc(100vw - 40px); }
+  .event-title { font-size: 28px; }
+  .hero { flex-direction: column; align-items: flex-start; }
   .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 14px; }
   .stat { padding: 12px; gap: 10px; border-radius: 18px; }
   .stat-ic { width: 38px; height: 38px; border-radius: 12px; }

@@ -102,14 +102,16 @@
   </header>
 
   <section class="hero">
-    <div class="event-title">
-      <label for="event-select" class="sr-only">Événement</label>
-      <select id="event-select"></select>
-      <svg class="i chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+    <div class="event-switch">
+      <button id="event-btn" class="event-title" aria-haspopup="true" aria-expanded="false" title="Changer d'événement ou en créer un">
+        <span id="event-name"></span><svg class="i chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </button>
+      <div class="menu-pop" id="event-menu" hidden></div>
     </div>
-    <span class="date-pill" id="event-date"></span>
-    <button id="plan-status" class="plan-pill"></button>
-    <button id="btn-new-event" class="pill ghost small"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg> Nouvel événement</button>
+    <div class="hero-meta">
+      <span class="date-pill" id="event-date"></span>
+      <button id="plan-status" class="plan-pill"></button>
+    </div>
   </section>
 
   <section class="stats-row" id="stats-row"></section>

@@ -340,11 +340,8 @@ function refresh() {
 
 function renderHeader() {
   const ev = cur();
-  const sel = $('#event-select');
-  sel.innerHTML = [...db.events]
-    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.name.localeCompare(b.name))
-    .map((e) => `<option value="${e.id}" ${e.id === ev.id ? 'selected' : ''}>${esc(e.name)}</option>`)
-    .join('');
+  $('#event-name').textContent = ev.name;
+  if (!$('#event-menu').hidden) renderEventMenu();
   $('#event-date').textContent = ev.date ? formatLongDate(ev.date) : 'Date à préciser';
   $('#event-date').classList.toggle('empty', !ev.date);
   $('#btn-undo').disabled = !undoStack.length;
@@ -1691,10 +1688,43 @@ $('#list-body').addEventListener('click', (e) => {
 // ---------- Événements ----------
 
 const eventDialog = $('#event-dialog');
-$('#btn-new-event').onclick = () => {
+function openNewEvent() {
   $('#event-form').reset();
   eventDialog.showModal();
-};
+}
+
+// Menu de l'événement (toucher le titre) : changer d'événement, ou en créer un.
+const eventMenu = $('#event-menu');
+function renderEventMenu() {
+  const ev = cur();
+  eventMenu.innerHTML = [...db.events]
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.name.localeCompare(b.name))
+    .map((e) => `<button data-ev-id="${e.id}" class="${e.id === ev.id ? 'current' : ''}">
+      <span class="ev-check">${e.id === ev.id ? ic('check') : ''}</span>
+      <span class="ev-label"><b>${esc(e.name)}</b><small>${e.date ? formatLongDate(e.date) : 'Date à préciser'} · ${e.exhibitors.length ? plural(e.exhibitors.length, 'exposant') : 'aucun exposant'}</small></span></button>`)
+    .join('') + `<hr><button data-ev-new>${ic('plus')}<span class="ev-label"><b>Nouvel événement</b></span></button>`;
+}
+function toggleEventMenu(open = eventMenu.hidden) {
+  if (open) renderEventMenu();
+  eventMenu.hidden = !open;
+  $('#event-btn').setAttribute('aria-expanded', String(open));
+}
+$('#event-btn').onclick = (e) => { e.stopPropagation(); dataMenu.hidden = true; toggleEventMenu(); };
+eventMenu.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const b = e.target.closest('button');
+  if (!b) return;
+  toggleEventMenu(false);
+  if (b.hasAttribute('data-ev-new')) { openNewEvent(); return; }
+  if (b.dataset.evId && b.dataset.evId !== cur().id) {
+    db.currentId = b.dataset.evId;
+    ui.selectedEx = null; ui.selectedTable = null;
+    save();
+    refresh();
+  }
+});
+document.addEventListener('click', () => { if (!eventMenu.hidden) toggleEventMenu(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !eventMenu.hidden) toggleEventMenu(false); });
 $('#event-cancel').onclick = () => eventDialog.close();
 $('#event-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -1722,12 +1752,6 @@ $('#event-form').addEventListener('submit', (e) => {
   eventDialog.close();
   refresh();
   toast(`Événement « ${name} » créé`, 'success');
-});
-$('#event-select').addEventListener('change', (e) => {
-  db.currentId = e.target.value;
-  ui.selectedEx = null; ui.selectedTable = null;
-  save();
-  refresh();
 });
 
 $('#btn-undo').onclick = undo;
@@ -1854,10 +1878,10 @@ function renderPlanStatus() {
   $('#plans-badge').hidden = !unsaved;
   const pill = $('#plan-status');
   pill.className = 'plan-pill' + (unsaved ? ' unsaved' : '');
-  pill.textContent = p ? `Plan : ${p.name}${unsaved ? ' (modifié)' : ''}` : unsaved ? 'Plan non enregistré' : `${plural(ev.plans.length, 'plan enregistré', 'plans enregistrés')}`;
+  pill.textContent = p ? `Plan : ${p.name}${unsaved ? ' (modifié)' : ''}` : unsaved ? 'Plan non enregistré' : ev.plans.length ? plural(ev.plans.length, 'version enregistrée', 'versions enregistrées') : 'Aucune version enregistrée';
   pill.title = 'Voir les plans enregistrés';
 }
-$('#plan-status').onclick = () => { ui.tab = 'plans'; renderSidebar(); };
+$('#plan-status').onclick = () => showTab('plans');
 
 function renderPlans() {
   if (typingIn($('#tab-plans'), renderPlans)) return;
@@ -2204,7 +2228,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v36';
+const APP_VERSION = 'v37';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;
