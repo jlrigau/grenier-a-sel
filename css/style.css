@@ -649,6 +649,16 @@ dialog.full[open] { display: flex; }
 }
 .sheet-close:hover { background: #ece6d8; }
 #install-dialog .sheet-close { position: absolute; top: 14px; right: 14px; margin: 0; }
+/* Doigt : croix plus grande. Fenêtre en plein écran (clavier ouvert) : la croix reste sous la barre
+   d'état (heure, batterie) au lieu de se coller tout en haut de l'écran. */
+@media (pointer: coarse) {
+  .sheet-close { width: 44px; height: 44px; }
+}
+@media (max-width: 900px) {
+  :root.kbd-open dialog[open] .sheet-close { top: max(0px, calc(env(safe-area-inset-top) - 10px)); }
+  .list-actions .close-x { width: 44px; height: 44px; border-radius: 50%; background: var(--surface-3); color: var(--ink); display: grid; place-items: center; top: 10px; }
+  :root.kbd-open .list-actions .close-x { position: fixed; z-index: 5; right: 12px; top: calc(var(--vvtop, 0px) + env(safe-area-inset-top) + 2px); }
+}
 
 /* Écran tactile : des champs en 16 px au moins, sinon Safari zoome sur la page en les touchant. */
 @media (pointer: coarse) {
