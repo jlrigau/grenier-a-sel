@@ -1041,7 +1041,7 @@ const onSubPage = () => isPhone() && ui.tab in SUB_PAGES;
 function renderPage() {
   const sub = onSubPage();
   document.documentElement.classList.toggle('sub-page', sub);
-  $('#page-head').innerHTML = sub && SUB_PAGES[ui.tab] ? `<h1>${SUB_PAGES[ui.tab]}</h1><p class="muted">${esc(cur().name)}</p>` : '';
+  $('#page-head').innerHTML = sub && SUB_PAGES[ui.tab] ? `<h1>${SUB_PAGES[ui.tab]}</h1>` : '';
 }
 function showTab(tab) {
   const wasSub = onSubPage();
@@ -2204,7 +2204,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Infos techniques (Réglages) : mesures de l'écran, pour diagnostiquer un affichage décalé sur téléphone.
-const APP_VERSION = 'v35';
+const APP_VERSION = 'v36';
 const diag = { gap: null };
 function screenInfo() {
   const vv = window.visualViewport;
