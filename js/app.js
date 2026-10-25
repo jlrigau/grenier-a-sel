@@ -341,6 +341,10 @@ function refresh() {
 function renderHeader() {
   const ev = cur();
   $('#event-name').textContent = ev.name;
+  const need = backupNeeded();
+  const alert = $('#backup-alert');
+  alert.hidden = !need;
+  alert.innerHTML = need ? `${ic('shield')}<span>${need === 'never' ? 'Vos données ne sont enregistrées que sur cet appareil.' : `Dernière sauvegarde ${sinceText(db.lastBackup)}.`} <b>Pensez à sauvegarder.</b></span><button class="pill tiny" data-backup>Sauvegarder</button>` : '';
   if (!$('#event-menu').hidden) renderEventMenu();
   $('#event-date').textContent = ev.date ? formatLongDate(ev.date) : 'Date à préciser';
   $('#event-date').classList.toggle('empty', !ev.date);
@@ -561,7 +565,13 @@ function renderSettings() {
     </div>
 
     <h3>Données</h3>
-    <p class="muted">Les plans sont enregistrés dans ce navigateur. Pour les partager ou les sauvegarder, utilisez <b>Données → Exporter</b>, puis <b>Importer</b> sur un autre poste.</p>
+    <p class="muted">Tout est enregistré sur cet appareil uniquement. Sauvegardez régulièrement (le fichier peut être envoyé par mail ou rangé dans vos fichiers) ; « Importer » le remet dans l'outil, ici ou sur un autre appareil.</p>
+    <p class="backup-line">${db.lastBackup ? `Dernière sauvegarde : <b>${sinceText(db.lastBackup)}</b>` : 'Aucune sauvegarde pour l\'instant.'}</p>
+    <div class="btn-row">
+      <button class="btn small primary" data-act="backup">Sauvegarder tous les événements</button>
+      <button class="btn small" data-act="share-event">Partager cet événement</button>
+      <button class="btn small" data-act="import">Importer un fichier…</button>
+    </div>
     <div class="btn-row">
       <button class="btn small danger" data-act="delete-event">Supprimer cet événement</button>
     </div>
@@ -1115,6 +1125,9 @@ $('#tab-settings').addEventListener('click', (e) => {
     commit((ev) => { ev.tables = defaultTables(); ev.assignments = {}; });
   }
   if (act === 'reset-power') commit((ev) => { ev.tables.forEach((t) => { delete t.power; }); });
+  if (act === 'backup') backupAll();
+  if (act === 'share-event') shareEvent();
+  if (act === 'import') $('#import-file').click();
   if (act === 'delete-event') {
     const ev = cur();
     if (!confirm(`Supprimer définitivement l'événement « ${ev.name} » ?`)) return;
@@ -1685,6 +1698,9 @@ $('#list-body').addEventListener('click', (e) => {
 
 // ---------- Événements ----------
 
+$('#backup-alert').addEventListener('click', (e) => { if (e.target.closest('[data-backup]')) backupAll(); });
+$('#btn-share').onclick = () => shareEvent();
+
 const eventDialog = $('#event-dialog');
 function openNewEvent() {
   $('#event-form').reset();
@@ -1770,6 +1786,49 @@ function download(filename, content, type) {
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
+// Partage d'un fichier : feuille de partage du téléphone (WhatsApp, Mail, Fichiers…) si possible,
+// sinon téléchargement. Renvoie true si le fichier est parti (partagé ou téléchargé).
+async function shareOrDownload(filename, content, title) {
+  const file = new File([content], filename, { type: 'application/json' });
+  if (touchScreen() && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title }); return true; }
+    catch (e) { if (e.name === 'AbortError') return false; }
+  }
+  download(filename, content, 'application/json');
+  return true;
+}
+const eventsFile = (events) => JSON.stringify({ app: 'grenier-a-sel', version: 1, events }, null, 2);
+const today = () => new Date().toISOString().slice(0, 10);
+
+// Sauvegarde complète (tous les événements) : retient sa date pour le rappel.
+async function backupAll() {
+  const ok = await shareOrDownload(`grenier-a-sel-sauvegarde-${today()}.json`, eventsFile(db.events), 'Sauvegarde Grenier à sel');
+  if (!ok) return;
+  db.lastBackup = Date.now();
+  save();
+  renderHeader();
+  if (ui.tab === 'settings') renderSettings();
+  toast('Sauvegarde faite. Gardez ce fichier (mail, Drive…) : il permet de tout retrouver avec « Importer ».', 'success');
+}
+async function shareEvent(ev = cur()) {
+  await shareOrDownload(`grenier-a-sel-${slug(ev.name)}.json`, eventsFile([ev]), ev.name);
+}
+
+// Rappel : des données réelles (hors démonstration) ont changé depuis la dernière sauvegarde.
+function backupNeeded() {
+  const real = db.events.filter((e) => !e.demo && e.exhibitors.length);
+  if (!real.length) return null;
+  const changed = Math.max(...real.map((e) => e.updatedAt || 0));
+  const last = db.lastBackup || 0;
+  if (changed <= last) return null;
+  if (!last) return real.reduce((n, e) => n + e.exhibitors.length, 0) >= 3 ? 'never' : null;
+  return Date.now() - last > 3 * 864e5 ? 'old' : null;
+}
+const sinceText = (t) => {
+  const d = Math.floor((Date.now() - t) / 864e5);
+  return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`;
+};
+
 const slug = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'plan';
 
 dataMenu.addEventListener('click', (e) => {
@@ -1777,8 +1836,9 @@ dataMenu.addEventListener('click', (e) => {
   if (!act) return;
   dataMenu.hidden = true;
   const ev = cur();
-  if (act === 'export-event') download(`grenier-a-sel-${slug(ev.name)}.json`, JSON.stringify({ app: 'grenier-a-sel', version: 1, events: [ev] }, null, 2), 'application/json');
-  if (act === 'export-all') download(`grenier-a-sel-tous-les-evenements.json`, JSON.stringify({ app: 'grenier-a-sel', version: 1, events: db.events }, null, 2), 'application/json');
+  if (act === 'backup') backupAll();
+  if (act === 'share-event') shareEvent(ev);
+  if (act === 'print') $('#btn-print').click();
   if (act === 'import') $('#import-file').click();
   if (act === 'export-png') exportPNG();
   if (act === 'list') openList();
@@ -2112,6 +2172,10 @@ function toast(message, kind = 'info', action = null) {
   close.onclick = () => el.remove();
   el.appendChild(close);
   $('#toasts').appendChild(el);
+  // Au plus 2 messages à l'écran sur téléphone (3 sur ordinateur) : les plus anciens s'effacent.
+  const max = isPhone() ? 2 : 3;
+  const all = [...$('#toasts').children];
+  all.slice(0, Math.max(0, all.length - max)).forEach((x) => x.remove());
   setTimeout(() => el.remove(), action ? 9000 : 5000);
 }
 
@@ -2243,7 +2307,7 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v39';
+const APP_VERSION = 'v40';
 $('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------

@@ -88,13 +88,15 @@
       <div class="menu">
         <button class="pill ghost" id="btn-data-menu"><span class="lbl">Données</span> <svg class="i i-sm" aria-hidden="true"><use href="#i-chevron"/></svg></button>
         <div class="menu-pop" id="data-menu" hidden>
-          <button data-action="export-event"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg>Exporter cet événement (.json)</button>
-          <button data-action="export-all"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg>Exporter tous les événements (.json)</button>
+          <button data-action="backup"><svg class="i" aria-hidden="true"><use href="#i-shield"/></svg>Sauvegarder tous les événements…</button>
+          <button data-action="share-event"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg>Partager cet événement…</button>
           <button data-action="import"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Importer un fichier .json…</button>
           <button data-action="list"><svg class="i" aria-hidden="true"><use href="#i-table"/></svg>Liste des exposants (Excel / CSV)…</button>
           <button data-action="export-png"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Image du plan (.png)</button>
+          <button data-action="print" class="menu-print"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg>Imprimer le plan</button>
         </div>
       </div>
+      <button id="btn-share" class="round" title="Partager cet événement" aria-label="Partager cet événement"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg></button>
       <button id="btn-print" class="pill ghost"><svg class="i" aria-hidden="true"><use href="#i-printer"/></svg><span class="lbl">Imprimer</span></button>
       <button id="btn-list" class="pill green"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg><span class="lbl">Exporter la liste</span><span id="list-badge" class="list-badge" hidden title="La liste a changé depuis le dernier export">!</span></button>
     </div>
@@ -111,6 +113,7 @@
       <span class="date-pill" id="event-date"></span>
       <button id="plan-status" class="plan-pill"></button>
     </div>
+    <div id="backup-alert" class="backup-alert" hidden></div>
   </section>
 
   <section class="stats-row" id="stats-row"></section>

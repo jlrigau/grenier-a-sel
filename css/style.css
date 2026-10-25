@@ -828,3 +828,21 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
   :root.has-install-banner body { padding-bottom: calc(76px + 96px + env(safe-area-inset-bottom)); }
   :root.kbd-open .install-banner { display: none !important; }
 }
+
+/* Rappel de sauvegarde (sous le titre de l'événement) */
+.backup-alert:not([hidden]) {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 8px 8px 14px; border-radius: 16px;
+  background: var(--mustard-soft); color: var(--mustard-ink); font-size: 13.5px; line-height: 1.35;
+}
+.backup-alert > .i { flex-shrink: 0; }
+.backup-alert span { flex: 1; }
+.backup-alert .pill { background: var(--mustard); color: #4a3200; flex-shrink: 0; }
+.backup-line { margin: 0 0 8px; }
+/* Bouton Partager : téléphone seulement (il y remplace Imprimer, rangé dans le menu Données) */
+#btn-share { display: none; }
+.menu-print { display: none; }
+@media (max-width: 900px) {
+  :root.green-head #btn-share { display: grid; place-items: center; }
+  :root.green-head #btn-print { display: none; }
+  :root.green-head .menu-print { display: flex; }
+}
