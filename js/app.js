@@ -2243,8 +2243,8 @@ $('#install-close').onclick = () => $('#install-dialog').close();
 })();
 
 // Numéro de version, en bas de chaque page (à changer avec VERSION dans sw.js).
-const APP_VERSION = 'v38';
-$('#app-foot').textContent = `Grenier à sel · version ${APP_VERSION}`;
+const APP_VERSION = 'v39';
+$('#app-foot').textContent = `Version ${APP_VERSION}`;
 
 // ---------- Fenêtres : fermeture facile ----------
 // Chaque fenêtre se ferme par sa croix, en touchant à côté, avec Échap ou avec le « retour »
